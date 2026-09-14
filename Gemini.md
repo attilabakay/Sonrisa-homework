@@ -164,3 +164,58 @@ A centralized admin control center gives operations teams complete visibility an
 1. **Phase 1 (MVP):** Event normalization schema, keyword/category matching engine, Email + Slack Webhook integrations, basic User Portal.
 2. **Phase 2 (Admin & Reliability):** Admin queue monitoring dashboard, rate-limiting/cooldown engine, Slack OAuth app integration, Delivery Audit Logs.
 3. **Phase 3 (Expansion):** Advanced composite rule logic, Microsoft Teams & Webhook channels, user quiet hours, automated feed health checks.
+
+---
+promp: what would be the minial viable product for this task based on this document?
+
+---
+
+## MVP Feature Scope Summary
+
+| Component | Included in MVP | Deferred to Future Phases |
+| :--- | :--- | :--- |
+| **Data Feeds** | Basic RSS/News & Generic Ingestion Webhook | Real-time Financial WebSockets, Weather/Seismic APIs |
+| **Rule Logic** | Keyword, Category & Numerical Thresholds | Complex Composite Boolean Logic (`AND`/`OR`/`NOT`) |
+| **Channels** | Email & Slack Incoming Webhooks | Slack OAuth App, MS Teams, SMS, Webhooks |
+| **Admin View** | Basic Queue & Feed Health Monitoring | Full DLQ Management, Manual System Broadcasts, Rate Tiers |
+
+---
+prompt: My issue with the MVP is that it seems to misunderstand "add more channels later"; it could mean adding more data sources, and it could also mean adding more communication channels, such as via discord or via facebook for example.
+--- 
+
+You are spot on—"channels" in event-driven systems often creates ambiguity between inbound event feeds and outbound notification targets. Designing the architecture to support pluggable adapters on **both** ends completely resolves this distinction while preserving MVP simplicity.
+
+**Inbound Data Channels (Sources)**
+
+* **Definition:** The ingress routes where real-time world events originate (e.g., RSS feeds, WebSocket market streams, Discord server monitors, Facebook page webhooks, or disaster APIs).
+
+
+* **Abstraction Mechanism:** `EventIngestionAdapter` converts raw, source-specific payloads into your standardized internal schema (`event_id`, `category`, `severity`, `payload`). Adding a new data feed simply requires writing a new parser adapter.
+
+
+
+**Outbound Communication Channels (Destinations)**
+
+* **Definition:** The egress routes where users receive alerts (e.g., Email, Slack, Discord Webhooks, Facebook Messenger, SMS, Microsoft Teams).
+
+
+* **Abstraction Mechanism:** `NotificationChannelAdapter` takes formatted alerts and dispatches them via vendor-specific APIs (`send_message()`). Adding a target like Discord or Facebook Messenger requires implementing this interface without altering the rule evaluation engine.
+
+
+
+**Refined MVP Scope for Dual Extensibility**
+
+| Layer | MVP Inclusion | Plug-and-Play Extension Strategy |
+| --- | --- | --- |
+| **Inbound (Data Feeds)** | RSS/News Ingestion & Generic REST Webhook
+
+ | Add specialized adapters for social APIs (Discord/X monitors) or WebSockets without touching rule evaluation logic.
+
+ |
+| **Outbound (Notifications)** | Email (SendGrid/SES) & Slack Incoming Webhooks
+
+ | Add new dispatch adapters (e.g., Discord Webhook, Facebook Messenger API, Twilio SMS) without touching ingestion or matching.
+
+ |
+
+By building base interface classes for both **Ingestion** and **Delivery** during Phase 1, you guarantee that adding more channels later—whether they are incoming data feeds or outgoing messaging platforms—requires zero refactoring of the core engine.

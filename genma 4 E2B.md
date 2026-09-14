@@ -106,8 +106,6 @@ The goal of the MVP is to demonstrate that the system successfully routes an ale
 *   **Basic User & Role Management (Minimum Viable):** Admin can manage users and assign roles.
 *   **Source & Integration Management (Minimum Viable):** Admin can manage the configuration for the **single data source** currently in use.
 
----
-
 ## 🚀 MVP Summary: Architectural Proof
 
 The MVP's success metric is not just that an alert gets sent, but that the system successfully routes an alert to the correct channel using the standardized, pluggable mechanism.
@@ -125,3 +123,62 @@ The MVP's success metric is not just that an alert gets sent, but that the syste
 ### **Conclusion:**
 
 By focusing the MVP on proving the **Email $\rightarrow$ Slack** path *through* the **Pluggable API**, you satisfy the "Key Feature" requirement. You prove that the *mechanism* for adding a third channel later is sound, which was the main constraint.
+
+---
+promt: My issue with the MVP is that it seems to misunderstand "add more channels later"; it could mean adding more data sources, and it could also mean adding more communication channels, such as via discord or via facebook for example.
+---
+
+This is an excellent point. The ambiguity of "add more channels later" means the MVP needs to prove the architectural flexibility for **both** dimensions: **Data Sources** and **Communication Channels**.
+
+The previous MVP focused too heavily on proving the *communication* flexibility while minimizing the *data source* flexibility.
+
+Here is the revised MVP scope, designed to prove the architecture for both types of extensibility.
+
+---
+
+## 🎯 Revised Minimum Viable Product (MVP) Scope: Dual Flexibility Proof
+
+The MVP's goal is to demonstrate that the system can reliably ingest data from multiple sources and successfully route those events to multiple communication channels using a standardized, pluggable architecture.
+
+### 1. Core User Functionality (The "Set Up" Phase)
+*   **Alert Definition Interface (Essential):** Define a basic alert with Name, Source, Trigger Criteria, and Recipient mapping.
+*   **Basic Alert Dashboard (Essential):** View active alerts and the last notification log.
+*   **Alert Modification/Deletion (Essential):** Simple CRUD operations for user-defined alerts.
+
+### 2. Notification System (The "Communication Channel" Flexibility)
+*   **Pluggable Notification Service (The Core MVP Feature):**
+    *   **API-First Design:** The system must communicate with notification channels via a standardized internal API interface.
+    *   **Initial Plugins:** Implement the **Email Plugin** and the **Slack Plugin**.
+    *   **Notification Preferences:** Granular control for users to select *which* channels (Email/Slack) an alert should use.
+*   **Multi-Channel Support (Proof of Concept):** Successfully prove that an alert can be sent via **Email *or* Slack**.
+
+### 3. Data Ingestion & Processing (The "Data Source" Flexibility)
+*   **Event Ingestion Engine (Minimum Viable):** The engine must be capable of pulling data from **at least two distinct, reliable data sources** (e.g., one stock feed and one weather API).
+*   **Alert Triggering Logic (Minimum Viable):** The engine must compare incoming events from *any* source against user criteria to fire an alert.
+
+### 4. Administrative Features (The "Oversight" Phase)
+*   **Basic User & Role Management (Minimum Viable):** Admin can manage users and assign roles.
+*   **Source & Integration Management (Minimum Viable):** Admin can manage the configuration for **both** data sources currently in use.
+
+---
+
+## 🚀 MVP Summary: Dual Flexibility Proof
+
+The MVP's success metric is demonstrating the system can handle **multiple inputs** and **multiple outputs** through the pluggable layer.
+
+| Feature Category | MVP Inclusion | Rationale for Inclusion |
+| :--- | :--- | :--- |
+| **Alert Definition** | **✅ Included** | Core user value. |
+| **Pluggable Service** | **✅ Included (Email & Slack)** | Proves the communication flexibility mechanism works. |
+| **Data Ingestion** | **✅ Included (Minimum 2 Sources)** | **Crucial addition.** Proves the engine can handle more than one data stream. |
+| **Trigger Logic** | **✅ Included (Basic)** | Proves the decision-making process that leads to the notification. |
+| **Admin View** | **✅ Included (Basic Mgmt)** | Necessary to manage multiple sources and users. |
+| **Advanced Analytics** | **❌ Deferred** | Defer the Global Oversight Dashboard until the core pipeline is proven stable. |
+
+### **Conclusion:**
+
+This revised MVP validates the full spectrum of flexibility required:
+1.  **Data Source Flexibility:** By requiring **two data sources**, you prove the ingestion engine is robust enough to handle future data feeds.
+2.  **Communication Channel Flexibility:** By proving the **Pluggable Service** works with two channels, you prove the architecture is sound for adding Discord or Facebook later.
+
+This approach delivers a much stronger foundation for future growth.

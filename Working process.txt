@@ -18,3 +18,8 @@ Self hosted:
 I created a .md file from the AI answers, I did not provide all the prompt used but I provided prompts for each key step. My workflow is usualy discuss the issue at hand and when there is a clear answear I request a markdown formated version of the answear. That is what I provided in the model.md files.
 
 I request a MVP summary as well before starting to brainstorm them with each other.
+
+The Ais seems to fail to handle the ambiguity of the task as it is not clear based on the brife that we make it open to extending into communication channels or into data channels/sources. A safe bet would be going both ways.
+
+Reviewed all the responses from the models and converted them into an mvp.md with Claude code.
+Also finalised the MVP scope for features.
