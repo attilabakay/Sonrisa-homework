@@ -23,3 +23,9 @@ The Ais seems to fail to handle the ambiguity of the task as it is not clear bas
 
 Reviewed all the responses from the models and converted them into an mvp.md with Claude code.
 Also finalised the MVP scope for features.
+
+I plan to work in this with springboot for the backend and Vite React + Axios for the frontend
+
+The next step is to define the data models. At this step, I dropped the DeepSeek model as it was unable to follow the requirements correctly in the feature identification phase.
+
+Request a data model structure from each AI model. Compare and reduce it based on my ideas and preferences.
