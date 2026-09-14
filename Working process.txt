@@ -77,3 +77,20 @@ Also added: an admin GET /api/alerts/user/{userId}/all endpoint for "which alert
 
 Still open, not attempted this round: the scheduled polling job (no real external APIs to poll against, so untestable here), and real login/session enforcement (endpoints are still permitAll, though passwords are hashed).
 
+prompt: try ingestion against https://feeds.bbci.co.uk/news/rss.xml as a news source
+
+Real ingestion needs two things I haven't built yet: an HTTP fetch of the source URL, and an XML/RSS parser (the current pipeline only understands JSON rawJsonData). I'll add both, keyed off DataSource.resourceType, then wire it to a test run against the BBC feed.
+
+Now wire the trigger endpoint into DataSourceController.
+
+Let's also surface real error messages for this debug/demo phase, then compile.
+
+Now let's boot the app and run the real ingestion test against the BBC feed.
+
+Now let's create a NEWS DataSource pointing at the BBC RSS feed and trigger real ingestion.
+
+The BBC RSS feed ingests correctly — 34 real articles parsed into individual DataEntry rows. One is perfect for a live match test: "AI 'kill switch' may need to be mandatory, Anthropic co-founder says." Let's set up an alert for keyword "Anthropic" and re-ingest to confirm the matching engine fires against real content.
+
+Confirmed — that's exactly the real, live headline that triggered the match. Let's clean up: deactivate the test data source (best practice: keep it available in DB, but stop it since we're done testing) and shut down the server.
+
+This is the first milestone with a minimal proof-of-concept implementation of the backend.

@@ -1,5 +1,7 @@
 package com.sonrisa.homework.modules.datasource.controller;
 
+import com.sonrisa.homework.ingestion.DataSourceIngestionService;
+import com.sonrisa.homework.modules.dataentry.dto.base.DataEntryDTO;
 import com.sonrisa.homework.modules.datasource.dto.base.DataSourceDTO;
 import com.sonrisa.homework.modules.datasource.dto.request.DataSourceRequest;
 import com.sonrisa.homework.modules.datasource.service.base.DataSourceService;
@@ -26,6 +28,7 @@ import java.util.UUID;
 public class DataSourceController {
 
     private final DataSourceService dataSourceService;
+    private final DataSourceIngestionService dataSourceIngestionService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -58,5 +61,11 @@ public class DataSourceController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {
         dataSourceService.delete(id);
+    }
+
+    // Manual trigger standing in for the polling job (mvp final.md §4) until one exists.
+    @PostMapping("/{id}/ingest")
+    public List<DataEntryDTO> ingest(@PathVariable UUID id) {
+        return dataSourceIngestionService.ingest(id);
     }
 }
