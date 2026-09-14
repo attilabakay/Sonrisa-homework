@@ -29,3 +29,5 @@ I plan to work in this with springboot for the backend and Vite React + Axios fo
 The next step is to define the data models. At this step, I dropped the DeepSeek model as it was unable to follow the requirements correctly in the feature identification phase.
 
 Request a data model structure from each AI model. Compare and reduce it based on my ideas and preferences.
+
+The next step is to identify the workflows. Same as before, I have the current information and the decisions I made previously, and see what the AI agents think are the essential workflows.

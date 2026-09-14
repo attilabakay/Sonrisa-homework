@@ -34,7 +34,9 @@ DataSource {
   type            // DataType
   link            // provider base URL / API endpoint
   apikey
-  fieldMapping    // json — provider's raw field names → interface field names
+  fieldMapping  // json — provider's raw field names → interface field names
+  resourceType /json or xml
+  isActive    
 }
 ```
 
