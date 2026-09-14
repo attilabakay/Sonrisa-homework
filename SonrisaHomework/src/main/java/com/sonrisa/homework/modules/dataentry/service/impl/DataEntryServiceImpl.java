@@ -8,6 +8,7 @@ import com.sonrisa.homework.modules.dataentry.dto.request.DataEntryRequest;
 import com.sonrisa.homework.modules.dataentry.model.DataEntry;
 import com.sonrisa.homework.modules.dataentry.repository.DataEntryRepository;
 import com.sonrisa.homework.modules.dataentry.service.base.DataEntryService;
+import com.sonrisa.homework.matching.MatchingEngine;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class DataEntryServiceImpl implements DataEntryService {
 
     private final DataEntryRepository dataEntryRepository;
     private final DataSourceRepository dataSourceRepository;
+    private final MatchingEngine matchingEngine;
 
     @Override
     @Transactional
@@ -34,7 +36,9 @@ public class DataEntryServiceImpl implements DataEntryService {
                 .rawJsonData(request.rawJsonData())
                 .receivedAt(Instant.now())
                 .build();
-        return DataEntryDTO.fromEntity(dataEntryRepository.save(entry));
+        entry = dataEntryRepository.save(entry);
+        matchingEngine.evaluate(entry);
+        return DataEntryDTO.fromEntity(entry);
     }
 
     @Override

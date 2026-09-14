@@ -37,6 +37,12 @@ public class AlertController {
         return alertService.getActiveByUser(userId);
     }
 
+    // Admin view: all of a user's alerts, active or not (mvp final.md §5).
+    @GetMapping("/user/{userId}/all")
+    public List<AlertDTO> getAllByUser(@PathVariable UUID userId) {
+        return alertService.getAllByUser(userId);
+    }
+
     @GetMapping("/{id}")
     public AlertDTO getById(@PathVariable UUID id) {
         return alertService.getById(id);

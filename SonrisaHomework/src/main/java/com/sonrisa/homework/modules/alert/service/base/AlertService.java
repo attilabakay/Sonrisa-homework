@@ -13,6 +13,9 @@ public interface AlertService {
     // User's "view active" list (workflow.md §4), scoped to the logged-in user.
     List<AlertDTO> getActiveByUser(UUID userId);
 
+    // Admin visibility into which alerts (active or not) belong to which user (mvp final.md §5).
+    List<AlertDTO> getAllByUser(UUID userId);
+
     AlertDTO getById(UUID id);
 
     // Delete + recreate is the MVP's answer to editing — no update method.

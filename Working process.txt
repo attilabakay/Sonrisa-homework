@@ -53,3 +53,27 @@ Also added, since nothing was testable without it:
 Verified: compileJava succeeds, and I ran the app end-to-end via curl through the full chain — register → duplicate-email 409 → sender → data source → data entry → alert → active-alerts-by-user → notification attempt → deactivate alert (drops from active list) → deactivate+delete data source (409 due to entry history) → deactivate user. All behaved per spec.
 
 Not done, worth flagging: actual login/auth enforcement, the ingestion polling job, the matching engine, and channel adapters (Email/Slack) — those are separate pieces of the MVP beyond entity CRUD.
+
+After checking the core CRUD objects, I continued the code generation for the MVP.
+
+promt for claude code: continue with task based on the workflow, mvp final, and datamodel
+
+Now I'll implement the core loop the MVP is built to prove: the channel-adapter abstraction (§3), the typed source-interface + mapping pattern (§4), and the matching engine that ties DataEntry creation to Alert evaluation and NotificationAttempt recording (workflow.md: "creation triggers Matching").
+
+I built and verified the core loop the MVP is meant to prove. Summary of what's new on top of the CRUD layer:
+
+Channel adapters (com.sonrisa.homework.channel) — NotificationChannel interface with EmailNotificationChannel (JavaMailSender) and SlackNotificationChannel (webhook POST via RestClient), resolved by SenderType through NotificationChannelResolver. Adding a third channel later is exactly "write one adapter" as the MVP doc requires.
+
+Typed source interfaces (com.sonrisa.homework.matching.sourcedata) — NewsData/MarketData/EmergencyData records, built at match time from DataEntry.rawJsonData + DataSource.fieldMapping by SourceDataMapper. Nothing persisted, matching the datamodel doc's "in-memory-only construct" note.
+
+Matching engine (MatchingEngine) — runs synchronously right after a DataEntry is saved (DataEntryServiceImpl.create), per workflow.md's "creation triggers Matching." It:
+- pulls only alerts that are active and whose owning user is active (workflow.md §1's enforcement rule)
+- evaluates per type: keyword-contains for NEWS, ABOVE/BELOW threshold for MARKET (percent-change deliberately skipped — the source docs flag that as an open design question, not decided), exact region match for DISASTER/WEATHER
+- on match, resolves the alert's Sender → channel adapter, sends, and records a NotificationAttempt with the real status/error
+
+Verified live: booted the app, ran all three alert types through real HTTP calls — matching and non-matching entries for each type, one EMAIL sender and one SLACK sender. Got exactly 3 NotificationAttempt rows (correct alerts fired, non-matches didn't), each FAILED with a genuine, distinguishable error (SMTP connection refused vs. Slack DNS error) — showing the "call-success only" status semantics work as intended once real credentials are supplied.
+
+Also added: an admin GET /api/alerts/user/{userId}/all endpoint for "which alerts belong to which user" visibility (mvp final.md §5), and a spring.mail.host placeholder so the mail bean actually initializes.
+
+Still open, not attempted this round: the scheduled polling job (no real external APIs to poll against, so untestable here), and real login/session enforcement (endpoints are still permitAll, though passwords are hashed).
+

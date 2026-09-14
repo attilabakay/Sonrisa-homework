@@ -48,6 +48,11 @@ public class AlertServiceImpl implements AlertService {
     }
 
     @Override
+    public List<AlertDTO> getAllByUser(UUID userId) {
+        return alertRepository.findByUserId(userId).stream().map(AlertDTO::fromEntity).toList();
+    }
+
+    @Override
     public AlertDTO getById(UUID id) {
         return AlertDTO.fromEntity(findEntity(id));
     }
