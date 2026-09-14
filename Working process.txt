@@ -1,0 +1,20 @@
+"We want users to be able to set up alerts so they get notified when something important happens in the world — like breaking news, market movements, natural disasters, that kind of thing. Should work for both email and Slack. Make it flexible enough that we can add more channels later. We need an admin view too."
+
+First step: identify the key features. (First me, then run it trough all my AI agents) Brainstorm the results with the AIs
+-- users framework (register, subscribe to data sources, set up triggers, manage triggers)
+-- data sources(categiresd and searchable)
+-- triggers based on keywords or topic or (importance maybe?)
+-- connectors so it can send out the alerts through multiple frameworks (email and Slack)
+-- admin view(view data soruces, manualy triger alerts, healthly chekcs) 
+
+I will use the following AIs in the project:
+Cloud hosted:
+	free version of gemini
+	Claude pro
+Self hosted:
+	Deepseek coder v2
+	Genma E2B
+
+I created a .md file from the AI answers, I did not provide all the prompt used but I provided prompts for each key step. My workflow is usualy discuss the issue at hand and when there is a clear answear I request a markdown formated version of the answear. That is what I provided in the model.md files.
+
+I request a MVP summary as well before starting to brainstorm them with each other.
