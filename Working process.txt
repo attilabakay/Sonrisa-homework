@@ -33,3 +33,23 @@ Request a data model structure from each AI model. Compare and reduce it based o
 The next step is to identify the workflows. Same as before, I have the current information and the decisions I made previously, and see what the AI agents think are the essential workflows.
 
 Now that I have a planed feature set, data models and workflows. I can start to work on the backend.
+
+prompt for calude code: Now there is a spring boot project inside SonrisaHomework in that start to implement the crud entities based on the mvp final.md workflow.md and datamodel final.md -> first dev comment
+
+Implemented — all six entities from datamodel final.md, each with model/DTO(s)/repository/service/controller, restricted to exactly the operations workflow.md allows:
+
+- User — register, get all, get by id, deactivate (no update/delete)
+- Sender — full CRUD (not covered explicitly by workflow.md, so kept flexible for "picks/creates")
+- DataSource — create, get all/by id, update (link/apiKey/fieldMapping), deactivate, delete (blocked with 409 if it has DataEntry history)
+- DataEntry — create (manual/admin for now, since the polling job isn't built), get all/by source/by id — no update/delete
+- Alert — create, get active-by-user, get by id, deactivate (the real "delete"), hard delete (allowed but discouraged)
+- NotificationAttempt — create, get all, get by alert — append-only, no update/delete
+
+Also added, since nothing was testable without it:
+- H2 in-memory datasource + JPA config in application.properties
+- A minimal SecurityConfig (permit-all, BCrypt PasswordEncoder bean) so Spring Security's auto-generated login doesn't block every request — real login/session handling per mvp final.md §1 is still unbuilt
+- A GlobalExceptionHandler mapping not-found/conflict/validation errors to proper HTTP statuses
+
+Verified: compileJava succeeds, and I ran the app end-to-end via curl through the full chain — register → duplicate-email 409 → sender → data source → data entry → alert → active-alerts-by-user → notification attempt → deactivate alert (drops from active list) → deactivate+delete data source (409 due to entry history) → deactivate user. All behaved per spec.
+
+Not done, worth flagging: actual login/auth enforcement, the ingestion polling job, the matching engine, and channel adapters (Email/Slack) — those are separate pieces of the MVP beyond entity CRUD.
