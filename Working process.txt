@@ -31,3 +31,5 @@ The next step is to define the data models. At this step, I dropped the DeepSeek
 Request a data model structure from each AI model. Compare and reduce it based on my ideas and preferences.
 
 The next step is to identify the workflows. Same as before, I have the current information and the decisions I made previously, and see what the AI agents think are the essential workflows.
+
+Now that I have a planed feature set, data models and workflows. I can start to work on the backend.
