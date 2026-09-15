@@ -321,3 +321,33 @@ Verified against the real API you tested with (https://saurav.tech/NewsAPI/every
 
 The backend was restarted to pick this up (in-memory DB reset, admin re-seeded automatically as usual). Nothing committed — let me know if you'd like a commit message for this one too.
 ---
+prompt: The next step is to introduce the scheduler into the notification/ingetstion. Considering the time constraints, this will not be an extensive implementation. My current goal is to create a simple scheduled job based on the application.properties file. Where it is possible to configure how often, in minute should, the ingestion should run; the minimum value should be 2 minutes. We should have a single configuration for ingestion. After ingestion it should check the alerts and trigger the necessary notifications.
+----
+claude code:
+Now the configurable, floor-clamped interval properties class.
+
+Now the scheduler itself.
+
+Now add the property with a clear comment to application.properties.
+
+Let's compile.
+
+The floor-clamping and initial scheduled run both work correctly, even with zero data sources yet. Let's seed a realistic mix (active/inactive, working/broken URL) and watch a real scheduled tick pick them up.
+
+All three edge cases confirmed exactly as expected. Let's stop this test instance and restart cleanly with the normal default config for the ongoing demo/dev use.
+
+Frontend is still up. Let's restart the backend with the normal default config so you can keep using the app, and re-seed a bit of demo data.
+
+The scheduler is implemented and thoroughly verified. Summary:
+
+New files (com.sonrisa.homework.ingestion):
+- IngestionProperties — single global app.ingestion.interval-minutes setting (default 5), with getEffectiveIntervalMillis() clamping to a 2-minute floor and a @PostConstruct warning logged if the configured value is below it
+- IngestionScheduler — @Scheduled(fixedDelayString = "#{ingestionProperties.effectiveIntervalMillis}"), 10s initial delay. Each tick fetches all DataSource rows where active = true (DataSourceRepository.findByActiveTrue(), new), and calls the existing DataSourceIngestionService.ingest() per source inside a try/catch so one broken source can't kill the run for the others
+
+Why no separate "then trigger notifications" step: ingest() already creates each DataEntry via DataEntryService.create(), which already calls MatchingEngine.evaluate() — so "after ingestion, check alerts and notify" was already wired from the earlier work; the scheduler just needed to be the thing calling ingest() periodically instead of only the manual button.
+
+Also added @EnableScheduling to the main application class and the app.ingestion.interval-minutes=5 property.
+
+Verified live, not just compiled — booted with the interval deliberately set to 1 minute and confirmed the exact warning log clamping it to 2; then with 3 seeded sources (one real/active, one active-but-broken-URL, one inactive) watched two real scheduled ticks 2 minutes apart and confirmed: the inactive source was never touched, the broken URL failed with a clear warning without stopping the run, and the real BBC source ingested 37 entries — all persisted correctly in the DB.
+
+Both servers are up now with the normal 5-minute default config and a bit of demo data re-seeded (alice + a keyword alert + the BBC source) if you want to keep poking at it. Let me know if you want a commit message for this too.
