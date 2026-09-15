@@ -385,3 +385,16 @@ Done and fully verified.
 The fix: added a reloadForTab map in App.jsx and a navigateTo(t) function (now wired to every tab button's onClick) that calls the relevant hook's reload() the moment you navigate to that tab — on top of, not instead of, the polling from before.
 
 Verified with a test that polling specifically can't explain: logged in as admin, viewed Data Sources (BBC row showing "active"), navigated to Alerts, deactivated that same source via a direct API call (simulating a change from elsewhere), then immediately clicked back into Data Sources with no wait at all — it showed "inactive" right away. Zero console errors.
+---
+New bug found: inactive data sources can't be reactivated.
+
+prompt: Let's fix the bug with the inactive data sources where if it's deactivated there is no way to reactivate it.
+---
+claude code:
+The fix:
+- Backend: DataSourceService.activate() / DataSourceServiceImpl (mirrors deactivate), new PATCH /api/data-sources/{id}/activate endpoint, kept behind the same ROLE_ADMIN gate as the rest of /api/data-sources/**
+- Frontend: activateDataSource() in api/dataSources.js, kebab menu now shows Activate when a source is inactive and Deactivate when active (never both)
+
+Verified: curl round-trip (deactivate → activate → active: true), confirmed a regular user still gets 403 on the new endpoint, and drove the actual UI — inactive row → kebab correctly offered "Activate" → clicked it → badge flipped to active, zero console errors.
+
+Both servers are up with this live. Let me know if you want a commit message.

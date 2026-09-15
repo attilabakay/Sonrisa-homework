@@ -18,5 +18,7 @@ public interface DataSourceService {
 
     DataSourceDTO deactivate(UUID id);
 
+    DataSourceDTO activate(UUID id);
+
     void delete(UUID id);
 }

@@ -1,5 +1,12 @@
 import { Fragment, useState } from 'react'
-import { createDataSource, deactivateDataSource, deleteDataSource, ingestDataSource, updateDataSource } from '../api/dataSources'
+import {
+  activateDataSource,
+  createDataSource,
+  deactivateDataSource,
+  deleteDataSource,
+  ingestDataSource,
+  updateDataSource,
+} from '../api/dataSources'
 import { errorMessage } from '../hooks/useApi'
 import KebabMenu from './KebabMenu'
 
@@ -101,6 +108,16 @@ export default function DataSourcesPanel({ dataSources, loading, error, onChange
     setRowError(null)
     try {
       await deactivateDataSource(id)
+      await onChanged()
+    } catch (err) {
+      setRowError(errorMessage(err))
+    }
+  }
+
+  async function handleActivate(id) {
+    setRowError(null)
+    try {
+      await activateDataSource(id)
       await onChanged()
     } catch (err) {
       setRowError(errorMessage(err))
@@ -215,7 +232,9 @@ export default function DataSourcesPanel({ dataSources, loading, error, onChange
                       { label: 'View details', onClick: () => toggleDetails(ds) },
                       { label: 'Edit', onClick: () => startEdit(ds) },
                       { label: 'Ingest now', onClick: () => handleIngest(ds) },
-                      ...(ds.active ? [{ label: 'Deactivate', onClick: () => handleDeactivate(ds.id) }] : []),
+                      ds.active
+                        ? { label: 'Deactivate', onClick: () => handleDeactivate(ds.id) }
+                        : { label: 'Activate', onClick: () => handleActivate(ds.id) },
                       { label: 'Delete', onClick: () => handleDelete(ds.id), danger: true },
                     ]}
                   />

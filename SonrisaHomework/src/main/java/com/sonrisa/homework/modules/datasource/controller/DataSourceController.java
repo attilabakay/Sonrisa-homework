@@ -56,6 +56,13 @@ public class DataSourceController {
         return dataSourceService.deactivate(id);
     }
 
+    // Resumes polling for a paused source -- the only way back once deactivated, short of
+    // delete + recreate (which loses the link to existing dataEntry history).
+    @PatchMapping("/{id}/activate")
+    public DataSourceDTO activate(@PathVariable UUID id) {
+        return dataSourceService.activate(id);
+    }
+
     // Only safe when no dataEntry history exists for this source (workflow.md §2) — otherwise 409.
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -68,6 +68,14 @@ public class DataSourceServiceImpl implements DataSourceService {
 
     @Override
     @Transactional
+    public DataSourceDTO activate(UUID id) {
+        DataSource dataSource = findEntity(id);
+        dataSource.setActive(true);
+        return DataSourceDTO.fromEntity(dataSourceRepository.save(dataSource));
+    }
+
+    @Override
+    @Transactional
     public void delete(UUID id) {
         DataSource dataSource = findEntity(id);
         if (dataEntryRepository.existsByDataSourceId(id)) {
