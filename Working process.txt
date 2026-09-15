@@ -568,4 +568,19 @@ claude code:
 A real bug this caught, not just a test artifact: to make SlackNotificationChannel/DiscordNotificationChannel properly testable, I refactored them from RestClient.create() to constructor-injected RestClient.Builder. That immediately failed to boot — this Spring Boot version doesn't bundle RestClient autoconfiguration under spring-boot-starter-webmvc the way older Boot versions did under spring-boot-starter-web. Added spring-boot-starter-restclient to build.gradle, which was missing entirely before. Confirmed by booting the real app afterward, not just the test suite.
 
 Deliberately not covered, given the time-boxing: DataEntryService/NotificationAttemptService (thin CRUD wrappers, low marginal value), repository-level @DataJpaTest for the custom findMatchableAlerts query (covered indirectly by the integration test's DB-backed flow, but not in isolation), and the frontend entirely, per your scope call.
+---
+prompt: Create a README for the project structure, it sort discription of the task. Then the brief. Then a section on the building process: first brainstorm, then feature set, then data model, then workflow. Then a small section about the demo functionality. Use the screenshots here; create new ones with dummy data if we need more. Then create a section for plans. I will update it with my own findings.
+---
+claude code:
+ Here's what I built:
 
+README.md at the repo root, structured exactly as asked:
+1. Short task description + a table mapping the assignment's submission checklist to where each artifact actually lives in this repo
+2. The brief, quoted
+3. Building process — brainstorm (4 AI models, DeepSeek dropped, the "go both ways" extensibility decision) → feature set → data model → workflow, each summarizing the real docs with links to them
+4. A "Running it locally" section (small addition beyond what you listed, but seemed necessary for a usable README)
+5. Demo mode — the app.demo.enabled property, what it seeds, why
+6. Screenshots — a table of 7 fresh app-UI screenshots (login, register, regular-user view, admin views) plus the 3 existing real-delivery proofs (Ethereal email, Discord)
+7. Future plans — mvp final.md §6's genuinely-still-open items, plus a few surfaced by actually using the system (push updates vs. polling, per-source cadence, password reset, explicit From address)
+
+New screenshots (screenshots/app-*.png, 7 files) captured live via Playwright against demo-mode data — every one of them is a real render of the actual running app, not a mockup.
