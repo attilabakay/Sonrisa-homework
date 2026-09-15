@@ -12,7 +12,13 @@ import java.util.Map;
 @Component
 public class SlackNotificationChannel implements NotificationChannel {
 
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
+
+    // Built from the injected (Spring Boot auto-configured) builder rather than
+    // RestClient.create() directly, so tests can bind a mock server to it.
+    public SlackNotificationChannel(RestClient.Builder restClientBuilder) {
+        this.restClient = restClientBuilder.build();
+    }
 
     @Override
     public SenderType type() {

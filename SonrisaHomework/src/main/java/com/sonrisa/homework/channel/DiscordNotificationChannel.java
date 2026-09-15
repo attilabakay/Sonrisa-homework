@@ -20,7 +20,13 @@ public class DiscordNotificationChannel implements NotificationChannel {
     // Discord's hard limit on a webhook message's "content" field.
     private static final int MAX_CONTENT_LENGTH = 2000;
 
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
+
+    // Built from the injected (Spring Boot auto-configured) builder rather than
+    // RestClient.create() directly, so tests can bind a mock server to it.
+    public DiscordNotificationChannel(RestClient.Builder restClientBuilder) {
+        this.restClient = restClientBuilder.build();
+    }
 
     @Override
     public SenderType type() {

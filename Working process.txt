@@ -533,3 +533,39 @@ Summary:
 - Frontend: the Region field and criteria summary now say "(rain)" for WEATHER specifically, since it no longer behaves identically to DISASTER
 
 As you said, this is a proof of concept — no real weather API is wired up (I didn't find a free, keyless one either), so it's only exercised through manually-posted DataEntry payloads shaped like a plausible provider response, same as I did for the live test above. If you ever find a real API to use, the only new work would be a DataSource row with the right fieldMapping (<provider field> → region, <provider field> → condition) — the matching/dispatch machinery already fully supports it.
+---
+prompt: Okay, the last stretch goal is to generate some tests for the project. We don't have time for full frontend and backend coverage, but let's try to test most of the backend.
+---
+claude code: 
+80 tests across 15 classes, all passing, zero failures.
+
+┌──────────────────────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│              Layer               │                                                                               Coverage                                                                                │
+├──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ MatchingEngine                   │ All 4 alert-type trigger rules (keyword/threshold/region/region+rain), dispatch success/failure, exception handling, no-match-no-dispatch                             │
+├──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ SourceDataMapper                 │ Field-mapping normalization + all 4 typed builders, malformed-input handling                                                                                          │
+├──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ RssFeedParser / JsonFeedParser   │ Multi-item splitting, the array-auto-detection logic from the JSON ingestion bug fix, XXE rejection                                                                   │
+├──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ IngestionProperties              │ The 2-minute floor-clamping                                                                                                                                           │
+├──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ RequestingUser                   │ Admin bypass / self-match / mismatch                                                                                                                                  │
+├──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ SenderServiceImpl,               │ The ownership-enforcement fix — every method's admin-vs-owner-vs-stranger behavior                                                                                    │
+│ AlertServiceImpl                 │                                                                                                                                                                       │
+├──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ DataSourceServiceImpl            │ Delete blocked by existing DataEntry history, activate/deactivate                                                                                                     │
+├──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ UserServiceImpl                  │ Duplicate-email rejection, password hashing, alerts-joined getAll()                                                                                                   │
+├──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Email/Slack/Discord channels     │ Success + failure paths via mocked JavaMailSender / MockRestServiceServer, including Discord's 2000-char truncation                                                   │
+├──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ AuthorizationIntegrationTest     │ One full-stack test class hitting real HTTP through MockMvc with the real Spring Security chain: public registration, 401 when unauthenticated, 403 for wrong role,   │
+│                                  │ 403 for wrong owner, disabled-user rejected at login                                                                                                                  │
+└──────────────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+A real bug this caught, not just a test artifact: to make SlackNotificationChannel/DiscordNotificationChannel properly testable, I refactored them from RestClient.create() to constructor-injected RestClient.Builder. That immediately failed to boot — this Spring Boot version doesn't bundle RestClient autoconfiguration under spring-boot-starter-webmvc the way older Boot versions did under spring-boot-starter-web. Added spring-boot-starter-restclient to build.gradle, which was missing entirely before. Confirmed by booting the real app afterward, not just the test suite.
+
+Deliberately not covered, given the time-boxing: DataEntryService/NotificationAttemptService (thin CRUD wrappers, low marginal value), repository-level @DataJpaTest for the custom findMatchableAlerts query (covered indirectly by the integration test's DB-backed flow, but not in isolation), and the frontend entirely, per your scope call.
+
