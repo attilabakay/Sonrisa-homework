@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createAlert, deactivateAlert, deleteAlert } from '../api/alerts'
 import { errorMessage } from '../hooks/useApi'
+import { describeCriteria } from '../utils/alertCriteria'
 
 const ALERT_TYPES = ['NEWS', 'MARKET', 'DISASTER', 'WEATHER']
 
@@ -12,18 +13,7 @@ function buildCriteria(type, fields) {
   return { region: fields.region }
 }
 
-function describeCriteria(type, criteriaJson) {
-  try {
-    const c = JSON.parse(criteriaJson)
-    if (type === 'NEWS') return `keyword: "${c.keyword}"`
-    if (type === 'MARKET') return `${c.ticker} ${c.comparator} ${c.threshold}`
-    return `region: "${c.region}"`
-  } catch {
-    return criteriaJson
-  }
-}
-
-export default function AlertsPanel({ activeUserId, senders, alerts, loading, error, showAll, onToggleShowAll, onChanged }) {
+export default function AlertsPanel({ activeUserId, isAdmin, senders, alerts, loading, error, showAll, onToggleShowAll, onChanged }) {
   const [type, setType] = useState('NEWS')
   const [senderId, setSenderId] = useState('')
   const [fields, setFields] = useState({ keyword: '', ticker: '', comparator: 'ABOVE', threshold: '', region: '' })
@@ -148,10 +138,12 @@ export default function AlertsPanel({ activeUserId, senders, alerts, loading, er
       </form>
       {formError && <p className="error">{formError}</p>}
 
-      <label className="hint">
-        <input type="checkbox" checked={showAll} onChange={(e) => onToggleShowAll(e.target.checked)} /> show
-        inactive alerts too
-      </label>
+      {isAdmin && (
+        <label className="hint">
+          <input type="checkbox" checked={showAll} onChange={(e) => onToggleShowAll(e.target.checked)} /> show
+          inactive alerts too
+        </label>
+      )}
 
       {loading && <p>Loading alerts...</p>}
       {error && <p className="error">{error}</p>}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import { getUsers } from './api/users'
 import { getSendersByUser } from './api/senders'
@@ -16,7 +16,10 @@ import DataSourcesPanel from './components/DataSourcesPanel'
 import DataEntriesPanel from './components/DataEntriesPanel'
 import NotificationsPanel from './components/NotificationsPanel'
 
-const TABS = ['Alerts', 'Senders', 'Data Sources', 'Data Entries', 'Notifications', 'Users']
+// User-facing (workflow.md: Alert/Sender are the user's own) vs admin-facing (User,
+// DataSource, DataEntry, NotificationAttempt are all admin/system-only per workflow.md).
+const USER_TABS = ['Alerts', 'Senders']
+const ADMIN_TABS = ['Data Sources', 'Data Entries', 'Notifications', 'Users']
 
 export default function App() {
   const { currentUser, error: authError, initializing, login, register, logout } = useAuth()
@@ -25,8 +28,17 @@ export default function App() {
   const [entrySourceFilter, setEntrySourceFilter] = useState('')
 
   const loggedIn = Boolean(currentUser)
+  const isAdmin = currentUser?.admin === true
+  const visibleTabs = isAdmin ? [...USER_TABS, ...ADMIN_TABS] : USER_TABS
 
-  const usersApi = useApi(() => (loggedIn ? getUsers() : Promise.resolve([])), [loggedIn])
+  // If role changes (e.g. logging out of an admin account and into a regular one) while an
+  // admin-only tab is selected, fall back to a tab everyone can see.
+  useEffect(() => {
+    if (!visibleTabs.includes(tab)) setTab('Alerts')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, tab])
+
+  const usersApi = useApi(() => (isAdmin ? getUsers() : Promise.resolve([])), [isAdmin])
   const sendersApi = useApi(
     () => (loggedIn ? getSendersByUser(currentUser.id) : Promise.resolve([])),
     [loggedIn, currentUser?.id],
@@ -35,17 +47,17 @@ export default function App() {
     () =>
       !loggedIn
         ? Promise.resolve([])
-        : showAllAlerts
+        : showAllAlerts && isAdmin
           ? getAllAlertsByUser(currentUser.id)
           : getActiveAlertsByUser(currentUser.id),
-    [loggedIn, currentUser?.id, showAllAlerts],
+    [loggedIn, currentUser?.id, showAllAlerts, isAdmin],
   )
-  const dataSourcesApi = useApi(() => (loggedIn ? getDataSources() : Promise.resolve([])), [loggedIn])
+  const dataSourcesApi = useApi(() => (isAdmin ? getDataSources() : Promise.resolve([])), [isAdmin])
   const dataEntriesApi = useApi(
-    () => (!loggedIn ? Promise.resolve([]) : entrySourceFilter ? getDataEntriesBySource(entrySourceFilter) : getDataEntries()),
-    [loggedIn, entrySourceFilter],
+    () => (!isAdmin ? Promise.resolve([]) : entrySourceFilter ? getDataEntriesBySource(entrySourceFilter) : getDataEntries()),
+    [isAdmin, entrySourceFilter],
   )
-  const notificationsApi = useApi(() => (loggedIn ? getNotificationAttempts() : Promise.resolve([])), [loggedIn])
+  const notificationsApi = useApi(() => (isAdmin ? getNotificationAttempts() : Promise.resolve([])), [isAdmin])
 
   // Friendlier hint if the backend isn't reachable at all (e.g. not started yet).
   const connectionError =
@@ -69,7 +81,7 @@ export default function App() {
       {!initializing && loggedIn && (
         <>
           <nav className="tabs">
-            {TABS.map((t) => (
+            {visibleTabs.map((t) => (
               <button key={t} type="button" className={t === tab ? 'active' : ''} onClick={() => setTab(t)}>
                 {t}
               </button>
@@ -80,6 +92,7 @@ export default function App() {
             {tab === 'Alerts' && (
               <AlertsPanel
                 activeUserId={currentUser.id}
+                isAdmin={isAdmin}
                 senders={sendersApi.data}
                 alerts={alertsApi.data}
                 loading={alertsApi.loading}
@@ -100,7 +113,7 @@ export default function App() {
               />
             )}
 
-            {tab === 'Data Sources' && (
+            {tab === 'Data Sources' && isAdmin && (
               <DataSourcesPanel
                 dataSources={dataSourcesApi.data}
                 loading={dataSourcesApi.loading}
@@ -113,7 +126,7 @@ export default function App() {
               />
             )}
 
-            {tab === 'Data Entries' && (
+            {tab === 'Data Entries' && isAdmin && (
               <DataEntriesPanel
                 dataSources={dataSourcesApi.data}
                 entries={dataEntriesApi.data}
@@ -124,7 +137,7 @@ export default function App() {
               />
             )}
 
-            {tab === 'Notifications' && (
+            {tab === 'Notifications' && isAdmin && (
               <NotificationsPanel
                 attempts={notificationsApi.data}
                 loading={notificationsApi.loading}
@@ -132,7 +145,7 @@ export default function App() {
               />
             )}
 
-            {tab === 'Users' && (
+            {tab === 'Users' && isAdmin && (
               <UsersPanel users={usersApi.data} loading={usersApi.loading} error={usersApi.error} onChanged={usersApi.reload} />
             )}
           </main>

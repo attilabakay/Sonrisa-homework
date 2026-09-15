@@ -188,5 +188,49 @@ Now let's restart both servers (backend needs the new security code; a restart a
 Backend auth is fully verified via curl. Now let's drive the actual browser UI to confirm the login/register flow works end-to-end visually.
 
 Auth flow fully confirmed — bad password rejected with a clear error, valid login shows the logged-in header with role badge, and the session survives a page reload via the stored credentials. Let me finish re-seeding the fuller demo dataset (alerts, data sources, live ingest) now that the restart wiped the DB.
+---
+promtp: We have admin views and user views, but currently they are not separate; a regular user can see all the admin menus. Let's separate them based on the documented guidelines.
+---	
+claude code:
 
+Good catch — right now the backend authorizes any logged-in user for every endpoint, and the frontend shows all six tabs regardless of role. Let me fix both sides against what workflow.md actually specifies per entity (User/DataSource/DataEntry/NotificationAttempt are admin-facing; Alert/Sender are user-facing) and mvp final.md §5's three admin-view bullets.
 
+Now add existsByAdminTrue() to UserRepository and a dev bootstrap seeder so there's an actual admin account to test with.
+
+Let's compile the backend before moving to the frontend.
+
+Now the frontend: split tabs by role, gate admin-only data fetching, and add the missing "which alerts belong to which user" admin view.
+
+Now update AlertsPanel.jsx to use the shared helper and hide the admin-only "show inactive" toggle from non-admins.
+
+Now add per-user alert visibility to UsersPanel.jsx — the third documented admin-view bullet that was still missing.
+
+Now update App.jsx — split tabs by role, gate admin-only data fetching, pass isAdmin down.
+
+Clean. Now let's restart both servers and verify the whole thing end-to-end — backend authorization via curl, then the actual admin/user UI split in a real browser.
+
+Let's confirm the admin seeder ran and verify role-based authorization via curl before touching the browser.
+
+Backend authorization is correct across the board. Now let's drive the browser to confirm the tabs actually differ per role.
+
+Exactly right, zero console errors even. Let's look at the screenshots to confirm visually.
+
+Everything works exactly as designed: carol (regular user) sees only Alerts/Senders; admin sees all six tabs plus the "show inactive alerts too" toggle; and the admin's per-user alert expansion in the Users tab works (correctly showing "No alerts for this user" since carol has none yet). Let's stop the servers now that this is verified, then commit.
+
+Admin and user views are now genuinely separated, enforced on both sides:
+
+Backend (SecurityConfig, path-ordered, most-specific-first):
+- Admin-only (hasRole("ADMIN")): all of /api/users/** (except POST /register and GET /me), all of /api/data-sources/**, /api/data-entries/**, /api/notification-attempts/**, and GET /api/alerts/user/*/all — this maps exactly to workflow.md's (admin-facing)/(system-only) labels on User, DataSource, DataEntry, NotificationAttempt
+- Any authenticated user: Alert and Sender endpoints (a user's own alerts/delivery channels)
+- Added DemoAdminSeeder — a CommandLineRunner that creates admin@example.com / admin12345 on first boot if no admin exists, since there was previously no way to reach the admin views at all on a fresh database
+
+Frontend:
+- App.jsx now splits tabs into USER_TABS (Alerts, Senders) and ADMIN_TABS (Data Sources, Data Entries, Notifications, Users) based on currentUser.admin, and stops even fetching admin-only data for regular users
+- AlertsPanel hides the "show inactive alerts too" toggle (backed by the admin-only endpoint) from non-admins
+- UsersPanel gained the third documented admin-view capability that was actually still missing — mvp final.md §5's "visibility into which alerts belong to which user" — via a "View alerts" expansion per row
+
+Verified: curl round-trip proving 403 on every admin endpoint for a regular user and 200 for an admin, plus a full Playwright pass confirming the regular user sees exactly ["Alerts", "Senders"] and the admin sees all six tabs with the per-user alert view working — zero console errors either way.
+
+Nothing's committed — say the word if you want this staged/committed, and let me know if you'd rather regular users not be able to reach GET /api/users/{id} at all (currently folded into the same admin-only rule as the user list, which seemed like the more defensible reading of workflow.md, but I can split it out if you want something different there).
+---
+Manually verified that the views are now separated by role.
