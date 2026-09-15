@@ -53,6 +53,14 @@ public class SourceDataMapper {
         );
     }
 
+    public WeatherData toWeather(Map<String, Object> normalized) {
+        return new WeatherData(
+                asString(normalized.get("region")),
+                asString(normalized.get("condition")),
+                asInstant(normalized.get("timestamp"))
+        );
+    }
+
     private Map<String, Object> readJson(String json) {
         try {
             return objectMapper.readValue(json, new TypeReference<>() {

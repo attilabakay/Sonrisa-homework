@@ -115,7 +115,8 @@ export default function AlertsPanel({ activeUserId, isAdmin, senders, alerts, lo
 
         {(type === 'DISASTER' || type === 'WEATHER') && (
           <label>
-            Region: <input value={fields.region} onChange={(e) => setField('region', e.target.value)} required />
+            {type === 'WEATHER' ? 'Region (fires on rain):' : 'Region:'}{' '}
+            <input value={fields.region} onChange={(e) => setField('region', e.target.value)} required />
           </label>
         )}
 

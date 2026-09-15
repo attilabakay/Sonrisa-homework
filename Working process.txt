@@ -510,3 +510,26 @@ Great proof — real Discord delivery, real CNN content. Let's save it into the 
 Confirmed end-to-end — the backend shows a real burst of status: SENT, error: null records for alice's Discord alert (alertId c06d7a0f...), matching your feed re-ingestion, consistent with the "dancing baby" article landing in your server. The one FAILED entry in there is my earlier structural test against a deliberately fake webhook URL, not a problem.
 
 Discord adapter is fully proven — both by the code path (compiles, resolver auto-discovers it, zero changes elsewhere) and now by a real delivery into your actual server. Screenshot's saved at screenshots/discord-notification-real-delivery.png. Want a commit message for the Discord adapter + this screenshot together?
+---
+prompt: Stretch goal: let's implement a new alert type: weather. I did not manage to find a working, free, fully open (no key) api so we will make a theoretical implementation. The weather trigger should check for a match in location and for rain in the response. This is more of a proof of concept than actually implementation. 
+---
+claude code:
+Let's check what frontend already supports WEATHER (it was stubbed in early as a DataType enum value) before touching the backend matching logic.
+
+Now add the matchesWeather method next to matchesRegion.
+
+Now a small frontend clarity improvement — since WEATHER now behaves differently from DISASTER under the hood, the UI should say so.
+
+Let's compile and lint before verifying live.
+
+Now let's restart the backend and verify the AND-logic (region + rain) with a proof-of-concept test matrix — three cases that should distinguish correctly.
+
+Confirmed — exactly case A (California + "light rain") matched; the sunny-California and rainy-Texas entries correctly produced zero attempts, proving the region-AND-rain logic works precisely. WEATHER alert type is done.
+
+Summary:
+- WeatherData — new typed source interface (region, condition, timestamp), separate from EmergencyData, matching mvp final.md §4's stretch-goal WeatherInterface
+- SourceDataMapper.toWeather() — builds it from the mapped fields, same pattern as the other three types
+- MatchingEngine — WEATHER split out of the shared DISASTER case into its own matchesWeather(): requires region match and the mapped condition field to contain "rain" (case-insensitive)
+- Frontend: the Region field and criteria summary now say "(rain)" for WEATHER specifically, since it no longer behaves identically to DISASTER
+
+As you said, this is a proof of concept — no real weather API is wired up (I didn't find a free, keyless one either), so it's only exercised through manually-posted DataEntry payloads shaped like a plausible provider response, same as I did for the live test above. If you ever find a real API to use, the only new work would be a DataSource row with the right fieldMapping (<provider field> → region, <provider field> → condition) — the matching/dispatch machinery already fully supports it.

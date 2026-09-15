@@ -8,6 +8,7 @@ import com.sonrisa.homework.matching.sourcedata.EmergencyData;
 import com.sonrisa.homework.matching.sourcedata.MarketData;
 import com.sonrisa.homework.matching.sourcedata.NewsData;
 import com.sonrisa.homework.matching.sourcedata.SourceDataMapper;
+import com.sonrisa.homework.matching.sourcedata.WeatherData;
 import com.sonrisa.homework.modules.alert.model.Alert;
 import com.sonrisa.homework.modules.alert.repository.AlertRepository;
 import com.sonrisa.homework.modules.dataentry.model.DataEntry;
@@ -49,7 +50,8 @@ public class MatchingEngine {
             boolean matched = switch (entry.getType()) {
                 case NEWS -> matchesKeyword(alert.getCriteria(), sourceDataMapper.toNews(normalized));
                 case MARKET -> matchesMarket(alert.getCriteria(), sourceDataMapper.toMarket(normalized));
-                case DISASTER, WEATHER -> matchesRegion(alert.getCriteria(), sourceDataMapper.toEmergency(normalized));
+                case DISASTER -> matchesRegion(alert.getCriteria(), sourceDataMapper.toEmergency(normalized));
+                case WEATHER -> matchesWeather(alert.getCriteria(), sourceDataMapper.toWeather(normalized));
             };
             if (matched) {
                 dispatch(alert, entry);
@@ -117,6 +119,17 @@ public class MatchingEngine {
     private boolean matchesRegion(String criteriaJson, EmergencyData data) {
         String region = asString(readCriteria(criteriaJson).get("region"));
         return region != null && data.region() != null && data.region().equalsIgnoreCase(region);
+    }
+
+    // WEATHER's own trigger, distinct from DISASTER's plain region match: region AND rain
+    // (mvp final.md §4's stretch goal) — a proof of concept exercised against manually-posted
+    // DataEntry payloads, since no working free/keyless weather API was found to poll for real.
+    private boolean matchesWeather(String criteriaJson, WeatherData data) {
+        String region = asString(readCriteria(criteriaJson).get("region"));
+        if (region == null || data.region() == null || !data.region().equalsIgnoreCase(region)) {
+            return false;
+        }
+        return data.condition() != null && data.condition().toLowerCase().contains("rain");
     }
 
     private Map<String, Object> readCriteria(String criteriaJson) {

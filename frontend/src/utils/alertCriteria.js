@@ -5,6 +5,7 @@ export function describeCriteria(type, criteriaJson) {
     const c = JSON.parse(criteriaJson)
     if (type === 'NEWS') return `keyword: "${c.keyword}"`
     if (type === 'MARKET') return `${c.ticker} ${c.comparator} ${c.threshold}`
+    if (type === 'WEATHER') return `region: "${c.region}" (rain)`
     return `region: "${c.region}"`
   } catch {
     return criteriaJson
