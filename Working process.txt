@@ -234,3 +234,38 @@ Verified: curl round-trip proving 403 on every admin endpoint for a regular user
 Nothing's committed — say the word if you want this staged/committed, and let me know if you'd rather regular users not be able to reach GET /api/users/{id} at all (currently folded into the same admin-only rule as the user list, which seemed like the more defensible reading of workflow.md, but I can split it out if you want something different there).
 ---
 Manually verified that the views are now separated by role.
+---
+prompt: The data source view has a major issue. The created data source mappings are invisible. We should be able to view the data source mapping and update it if necessary. I would move all the buttons into a kebab menu for the data source, as it's not a good look to display three or more buttons next to each row.
+---
+Claude code: 
+Let's build this properly: a reusable kebab menu component, then rewrite the Data Sources panel with an expandable detail/edit view.
+
+Now let's lint and then visually verify with the running app.
+
+Clean. Now let's start both servers, seed a data source, and drive it through the browser to verify the kebab menu, mapping visibility, and edit flow all actually work.
+
+Servers are already running from before (frontend HMR should've already picked up the changes). Let's check what data sources already exist.
+
+Good, there's a data source with a real mapping already seeded. Let's drive the browser to test the new mapping-visibility and kebab menu.
+
+Zero console errors. Let's look at the screenshots.
+
+This is exactly right — the field mapping column is now visible directly in the table, clicking it expands the full readable mapping table, and the kebab menu cleanly holds View details/Edit/Ingest now/Deactivate/Delete instead of a row of buttons. Let's check the edit flow.
+
+The edit round-trip works too — after saving, the row snaps back to view mode and the mapping table shows the new 4th field (link → sourceUrl) I added during the edit, confirming the updateDataSource call actually persisted through the previously-unused backend endpoint. Let's verify with the backend directly and stop the servers.
+
+Fixed and verified. Summary:
+
+The bug: field mappings were created via the form but never shown anywhere afterward — no column, no detail view — and each row had 3+ raw buttons (Ingest now / Deactivate / Delete) with no way to edit a source at all, even though the backend's PUT /api/data-sources/{id} already existed and was just never wired up in the UI.
+
+Fix:
+- New Field mapping column shows a compact raw → interface summary directly in the table (no more "invisible")
+- Clicking that summary expands a detail row below with the full mapping as a readable table, plus link/resource type/API key (masked)
+- New KebabMenu component (⋮ trigger, click-outside + Escape to close, ARIA menu/menuitem roles) replaces the row of buttons with: View details, Edit, Ingest now, Deactivate (if active), Delete
+- "Edit" turns that same expanded row into a form (same fields as create) with Save/Cancel, wired to the previously-dead updateDataSource call
+
+Verified live, not just visually: logged in as admin, expanded the BBC source's mapping, opened the kebab menu, edited the mapping to add a 4th field (link → sourceUrl), saved, and confirmed via a direct API call that it actually persisted on the backend. Zero console errors throughout.
+
+Both servers are still running from before (backend 8080, frontend 5173) — the frontend picked up these changes via HMR, so you can click through it yourself right now at http://localhost:5173. Let me know if you want them stopped, or if you'd like the "no activate button" gap addressed too (currently a deactivated source has no way back to active in the UI, matching a backend limitation — no activate endpoint exists yet).
+---
+Manually testing verified the same results.	
