@@ -17,22 +17,90 @@ h1 {
 }
 
 .user-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px 16px;
 }
 
-.user-bar-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.user-bar-row button:not(.active) {
+.user-bar button {
   background: white;
   color: var(--accent);
+}
+
+/* Logged-out auth screen: login and registration are separate layouts (AuthScreen swaps
+   which is mounted), not one form relabeled by a mode flag. */
+.auth-screen {
+  display: flex;
+  justify-content: center;
+  padding-top: 32px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px 28px 24px;
+}
+
+.auth-tagline {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-form h2 {
+  margin: 0 0 4px;
+  font-size: 1.3rem;
+}
+
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.auth-form input {
+  padding: 9px 11px;
+}
+
+.auth-form > button {
+  margin-top: 4px;
+  margin-right: 0;
+  padding: 10px;
+  font-weight: 600;
+}
+
+.auth-switch {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.auth-switch button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  font: inherit;
 }
 
 .tabs {

@@ -8,6 +8,7 @@ import { getDataEntries, getDataEntriesBySource } from './api/dataEntries'
 import { getNotificationAttempts } from './api/notifications'
 import { useApi } from './hooks/useApi'
 import { useAuth } from './hooks/useAuth'
+import AuthScreen from './components/AuthScreen'
 import UserBar from './components/UserBar'
 import UsersPanel from './components/UsersPanel'
 import SendersPanel from './components/SendersPanel'
@@ -69,14 +70,14 @@ export default function App() {
     <div className="app">
       <header>
         <h1>World Event Alerts</h1>
-        <UserBar currentUser={currentUser} error={authError} onLogin={login} onRegister={register} onLogout={logout} />
+        {loggedIn && <UserBar currentUser={currentUser} onLogout={logout} />}
       </header>
 
       {connectionError && <p className="error connection-error">{connectionError}</p>}
 
       {initializing && <p>Checking session...</p>}
 
-      {!initializing && !loggedIn && <p className="hint">Log in or register above to continue.</p>}
+      {!initializing && !loggedIn && <AuthScreen error={authError} onLogin={login} onRegister={register} />}
 
       {!initializing && loggedIn && (
         <>

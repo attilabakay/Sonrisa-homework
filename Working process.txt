@@ -268,4 +268,31 @@ Verified live, not just visually: logged in as admin, expanded the BBC source's 
 
 Both servers are still running from before (backend 8080, frontend 5173) — the frontend picked up these changes via HMR, so you can click through it yourself right now at http://localhost:5173. Let me know if you want them stopped, or if you'd like the "no activate button" gap addressed too (currently a deactivated source has no way back to active in the UI, matching a backend limitation — no activate endpoint exists yet).
 ---
-Manually testing verified the same results.	
+Manually testing verified the same results.
+
+For the next step I wanted to fix the login UI.
+---
+prompt: Let's do one more frontend-focused task. Let's move the register into a separate layout instead of the current one button selects whether it's a login or a registration.
+---
+claude code:
+Now the container that switches between them as genuinely separate layouts, not a shared form.
+
+Now simplify UserBar to just the logged-in identity strip.
+
+Now wire App.jsx to use AuthScreen for the logged-out state and only show UserBar when logged in.
+
+Clean. Now let's verify visually with the running servers (still up from before) and Playwright.
+
+Holds up well at mobile width too. This is done and fully verified — no regressions, no console errors, real registration/login round-trip confirmed against the backend.
+
+What changed: Login and Register are now genuinely separate layouts instead of one form with a relabeling toggle:
+- LoginForm.jsx / RegisterForm.jsx — distinct components with their own fields (Register adds a confirm-password check with real mismatch validation and a password-length hint; Login doesn't carry that baggage)
+- AuthScreen.jsx — composes whichever is active in a proper centered card (with a one-line tagline grounding the app's actual purpose), switching via a plain text link ("New here? Create an account") instead of two buttons competing for attention
+- UserBar.jsx simplified down to just the logged-in identity strip — login/register logic no longer lives there at all
+- App.jsx now shows AuthScreen in the main content area when logged out (not squeezed into the header bar), and only mounts UserBar once actually authenticated
+
+Both dev servers are still up from earlier and picked this up via HMR, so it's live at http://localhost:5173 if you want to click through it yourself.
+---
+Test verified
+
+
