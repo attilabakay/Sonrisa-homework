@@ -6,6 +6,7 @@ import com.sonrisa.homework.modules.user.service.base.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +36,13 @@ public class UserController {
     @GetMapping
     public List<UserDTO> getAll() {
         return userService.getAll();
+    }
+
+    // "Who am I" for the HTTP Basic principal — there's no login endpoint, so the client
+    // attaches credentials up front and calls this to confirm them and learn its own id.
+    @GetMapping("/me")
+    public UserDTO me(Authentication authentication) {
+        return userService.getByEmail(authentication.getName());
     }
 
     @GetMapping("/{id}")

@@ -1,83 +1,70 @@
 import { useState } from 'react'
-import { registerUser } from '../api/users'
-import { errorMessage } from '../hooks/useApi'
 
-// Stand-in for real login (mvp final.md §1 defers a login flow) — lets you register a user
-// and pick which existing user you're "acting as" for the Alerts/Senders tabs.
-export default function UserBar({ users, activeUserId, onSelect, onUsersChanged }) {
-  const [showRegister, setShowRegister] = useState(false)
+// Login/register control for HTTP Basic auth (useAuth owns the actual credential handling —
+// this just collects email/password and shows who's currently logged in).
+export default function UserBar({ currentUser, error, onLogin, onRegister, onLogout }) {
+  const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const activeUser = users?.find((u) => u.id === activeUserId) ?? null
-
-  async function handleRegister(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setSubmitting(true)
-    setError(null)
-    try {
-      const user = await registerUser({ email, password })
+    const ok = mode === 'login' ? await onLogin(email, password) : await onRegister(email, password)
+    setSubmitting(false)
+    if (ok) {
       setEmail('')
       setPassword('')
-      setShowRegister(false)
-      await onUsersChanged()
-      onSelect(user.id)
-    } catch (err) {
-      setError(errorMessage(err))
-    } finally {
-      setSubmitting(false)
     }
+  }
+
+  if (currentUser) {
+    return (
+      <div className="user-bar">
+        <div className="user-bar-row">
+          <span>Logged in as {currentUser.email}</span>
+          <span className={`badge ${currentUser.admin ? 'badge-admin' : ''}`}>
+            {currentUser.admin ? 'admin' : 'user'}
+          </span>
+          <button type="button" onClick={onLogout}>
+            Log out
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="user-bar">
       <div className="user-bar-row">
-        <label>
-          Acting as:{' '}
-          <select value={activeUserId ?? ''} onChange={(e) => onSelect(e.target.value || null)}>
-            <option value="">-- select user --</option>
-            {users?.map((u) => (
-              <option key={u.id} value={u.id} disabled={!u.active}>
-                {u.email}
-                {!u.active ? ' (disabled)' : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="button" onClick={() => setShowRegister((v) => !v)}>
-          {showRegister ? 'Cancel' : '+ New user'}
+        <button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>
+          Log in
         </button>
-        {activeUser && (
-          <span className={`badge ${activeUser.admin ? 'badge-admin' : ''}`}>
-            {activeUser.admin ? 'admin' : 'user'}
-          </span>
-        )}
+        <button type="button" className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>
+          Register
+        </button>
       </div>
-
-      {showRegister && (
-        <form className="inline-form" onSubmit={handleRegister}>
-          <input
-            type="email"
-            placeholder="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="password (min 8 chars)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            required
-          />
-          <button type="submit" disabled={submitting}>
-            Register
-          </button>
-        </form>
-      )}
+      <form className="inline-form" onSubmit={handleSubmit}>
+        <input
+          type="email"
+          placeholder="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder={mode === 'register' ? 'password (min 8 chars)' : 'password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          minLength={mode === 'register' ? 8 : undefined}
+          required
+        />
+        <button type="submit" disabled={submitting}>
+          {mode === 'login' ? 'Log in' : 'Register'}
+        </button>
+      </form>
       {error && <p className="error">{error}</p>}
     </div>
   )

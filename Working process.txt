@@ -54,10 +54,31 @@ Verified: compileJava succeeds, and I ran the app end-to-end via curl through th
 
 Not done, worth flagging: actual login/auth enforcement, the ingestion polling job, the matching engine, and channel adapters (Email/Slack) — those are separate pieces of the MVP beyond entity CRUD.
 
+prompt for calude code: Now there is a spring boot project inside SonrisaHomework in that start to implement the crud entities based on the mvp final.md workflow.md and datamodel final.md -> first dev comment
+
+Implemented — all six entities from datamodel final.md, each with model/DTO(s)/repository/service/controller, restricted to exactly the operations workflow.md allows:
+
+- User — register, get all, get by id, deactivate (no update/delete)
+- Sender — full CRUD (not covered explicitly by workflow.md, so kept flexible for "picks/creates")
+- DataSource — create, get all/by id, update (link/apiKey/fieldMapping), deactivate, delete (blocked with 409 if it has DataEntry history)
+- DataEntry — create (manual/admin for now, since the polling job isn't built), get all/by source/by id — no update/delete
+- Alert — create, get active-by-user, get by id, deactivate (the real "delete"), hard delete (allowed but discouraged)
+- NotificationAttempt — create, get all, get by alert — append-only, no update/delete
+
+Also added, since nothing was testable without it:
+- H2 in-memory datasource + JPA config in application.properties
+- A minimal SecurityConfig (permit-all, BCrypt PasswordEncoder bean) so Spring Security's auto-generated login doesn't block every request — real login/session handling per mvp final.md §1 is still unbuilt
+- A GlobalExceptionHandler mapping not-found/conflict/validation errors to proper HTTP statuses
+
+Verified: compileJava succeeds, and I ran the app end-to-end via curl through the full chain — register → duplicate-email 409 → sender → data source → data entry → alert → active-alerts-by-user → notification attempt → deactivate alert (drops from active list) → deactivate+delete data source (409 due to entry history) → deactivate user. All behaved per spec.
+
+Not done, worth flagging: actual login/auth enforcement, the ingestion polling job, the matching engine, and channel adapters (Email/Slack) — those are separate pieces of the MVP beyond entity CRUD.
+---
 After checking the core CRUD objects, I continued the code generation for the MVP.
-
+---
 promt for claude code: continue with task based on the workflow, mvp final, and datamodel
-
+---
+claude code:
 Now I'll implement the core loop the MVP is built to prove: the channel-adapter abstraction (§3), the typed source-interface + mapping pattern (§4), and the matching engine that ties DataEntry creation to Alert evaluation and NotificationAttempt recording (workflow.md: "creation triggers Matching").
 
 I built and verified the core loop the MVP is meant to prove. Summary of what's new on top of the CRUD layer:
@@ -76,9 +97,10 @@ Verified live: booted the app, ran all three alert types through real HTTP calls
 Also added: an admin GET /api/alerts/user/{userId}/all endpoint for "which alerts belong to which user" visibility (mvp final.md §5), and a spring.mail.host placeholder so the mail bean actually initializes.
 
 Still open, not attempted this round: the scheduled polling job (no real external APIs to poll against, so untestable here), and real login/session enforcement (endpoints are still permitAll, though passwords are hashed).
-
+---
 prompt: try ingestion against https://feeds.bbci.co.uk/news/rss.xml as a news source
-
+---
+claude code:
 Real ingestion needs two things I haven't built yet: an HTTP fetch of the source URL, and an XML/RSS parser (the current pipeline only understands JSON rawJsonData). I'll add both, keyed off DataSource.resourceType, then wire it to a test run against the BBC feed.
 
 Now wire the trigger endpoint into DataSourceController.
@@ -94,3 +116,77 @@ The BBC RSS feed ingests correctly — 34 real articles parsed into individual D
 Confirmed — that's exactly the real, live headline that triggered the match. Let's clean up: deactivate the test data source (best practice: keep it available in DB, but stop it since we're done testing) and shut down the server.
 
 This is the first milestone with a minimal proof-of-concept implementation of the backend.
+
+prompt: Okay, there is an empty frontend folder in the project. Inside it, build a basic frontend based on Vite React + Axios
+
+Found it — ./frontend next to SonrisaHomework. Let's confirm it's empty and check what tooling is available (node/npm version).
+
+Now I'll build out the app. First, the API client layer.
+
+Now the small shared useApi hook and a helper for surfacing backend error messages.
+
+Now the "acting as" user bar — since there's no real login endpoint yet, this is an honest stand-in: pick or register a user to act as.
+
+Now the Users admin panel.
+
+Now the Senders panel (needed before alerts can be created).
+
+Now the DataSources panel (create/update/deactivate/delete/ingest).
+
+Now the DataEntries (event log) and Notifications panels.
+
+main.jsx is fine as-is. Now let's write App.jsx wiring all panels together with tab navigation.
+
+Let's compile the backend and run lint on the frontend to catch any obvious mistakes before we boot both.
+
+Let's fix that — derive the connection error at render time instead of via an effect.
+
+Good — node_modules and other build artifacts are already ignored. I won't commit anything unless you ask. Summary:
+
+Built frontend/ — Vite + React + Axios, no other UI framework:
+- src/api/*.js — thin Axios wrappers for every backend endpoint (users, senders, data sources, data entries, alerts, notification attempts)
+- src/hooks/useApi.js — small shared load/error/reload hook
+- src/components/ — UserBar (stand-in for login: register or pick which user you're "acting as," since the backend has no login endpoint yet), UsersPanel, SendersPanel, AlertsPanel (per-type criteria forms for NEWS/MARKET/DISASTER/WEATHER), DataSourcesPanel (create/update/deactivate/delete + "Ingest now"), DataEntriesPanel (event log), NotificationsPanel (attempt log)
+- Plain, hand-written CSS (no UI kit) — clean tables, badges, forms, works down to phone width isn't a requirement here but it's simple flex/wrap layout
+
+Backend change required to make it work: added CORS (SecurityConfig) allowing http://localhost:5173, since the API previously had no CORS headers at all.
+
+Verified for real, not just compiled: installed Playwright, drove a headless Chromium session against both dev servers — registered a user, created a sender, created a NEWS alert, created a live BBC RSS data source, clicked "Ingest now" (34 real articles fetched and parsed), watched real NotificationAttempt rows appear with genuine SMTP failure messages, checked all six tabs render with data, and confirmed zero browser console errors throughout. Screenshots are in the scratchpad if you want to look at them again.
+
+Both dev servers are stopped now. To run it yourself: ./gradlew bootRun in SonrisaHomework/, npm run dev in frontend/.
+---
+At this point, I have a bare-bones frontend and backend. I tested the frontend manually and requested changes based on the user experience. Before moving to the backend, I found 3 main frontend issues.
+The lack of login forms. The generated user selector was not sufficient for the MVP. We can and should use basic auth, which does not require extensive implementation but looks effectively the same as a more complex login implementation.
+
+The lack of separation between user and admin forms. All the forms are rendered as admin forms.
+
+The lack of a data source field mapping view. Currently, it is impossible to check a data source mapping after it has been saved.
+---
+prompt: you can use basic auth for loging in, we don't need a specific endpoint for loging in.
+---
+claude code:
+This lines up exactly with the MVP doc's §1 ("basic auth — email + password, no SSO/OAuth"). I'll wire up real HTTP Basic authentication: a UserDetailsService backed by the existing User/UserRepository (passwords are already BCrypt-hashed), Spring Security validates the Authorization header per request — no login endpoint needed, just a /me endpoint so the frontend can ask "who am I" after attaching credentials. Disabled users get rejected automatically. Let me implement it.
+
+Now update SecurityConfig to enable HTTP Basic with stateless sessions.
+
+Now compile the backend to confirm the security wiring is sound.
+
+Backend compiles. Now the frontend side — replace the "acting as" stand-in with a real login/register flow that attaches HTTP Basic credentials to every request.
+
+Add getMe to the users API wrapper.
+
+Now the useAuth hook that owns credential state and attaches/detaches them on the shared axios instance.
+
+Now rewrite UserBar.jsx into a real login/register control.
+
+Now rewrite App.jsx to gate everything behind login and use currentUser.id in place of the old activeUserId.
+
+Now let's restart both servers (backend needs the new security code; a restart also wipes the in-memory DB, so I'll re-seed afterward) and verify the login flow actually works.
+
+401 confirms auth is enforced. Now let's verify the actual credential flow via curl before touching the browser: register, confirm anonymous access is rejected, confirm valid Basic auth works, and confirm a disabled user is rejected.
+
+Backend auth is fully verified via curl. Now let's drive the actual browser UI to confirm the login/register flow works end-to-end visually.
+
+Auth flow fully confirmed — bad password rejected with a clear error, valid login shows the logged-in header with role badge, and the session survives a page reload via the stored credentials. Let me finish re-seeding the fuller demo dataset (alerts, data sources, live ingest) now that the restart wiped the DB.
+
+

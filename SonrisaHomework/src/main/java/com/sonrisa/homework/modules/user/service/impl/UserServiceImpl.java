@@ -48,6 +48,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public UserDTO getByEmail(String email) {
+        return UserDTO.fromEntity(userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email)));
+    }
+
+    @Override
     @Transactional
     public UserDTO deactivate(UUID id) {
         User user = findEntity(id);

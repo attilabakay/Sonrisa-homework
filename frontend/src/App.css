@@ -30,6 +30,11 @@ h1 {
   flex-wrap: wrap;
 }
 
+.user-bar-row button:not(.active) {
+  background: white;
+  color: var(--accent);
+}
+
 .tabs {
   display: flex;
   gap: 4px;

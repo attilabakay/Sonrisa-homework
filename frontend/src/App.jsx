@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import './App.css'
 import { getUsers } from './api/users'
 import { getSendersByUser } from './api/senders'
@@ -7,6 +7,7 @@ import { getDataSources } from './api/dataSources'
 import { getDataEntries, getDataEntriesBySource } from './api/dataEntries'
 import { getNotificationAttempts } from './api/notifications'
 import { useApi } from './hooks/useApi'
+import { useAuth } from './hooks/useAuth'
 import UserBar from './components/UserBar'
 import UsersPanel from './components/UsersPanel'
 import SendersPanel from './components/SendersPanel'
@@ -18,125 +19,125 @@ import NotificationsPanel from './components/NotificationsPanel'
 const TABS = ['Alerts', 'Senders', 'Data Sources', 'Data Entries', 'Notifications', 'Users']
 
 export default function App() {
+  const { currentUser, error: authError, initializing, login, register, logout } = useAuth()
   const [tab, setTab] = useState('Alerts')
-  const [activeUserId, setActiveUserId] = useState(() => localStorage.getItem('activeUserId'))
   const [showAllAlerts, setShowAllAlerts] = useState(false)
   const [entrySourceFilter, setEntrySourceFilter] = useState('')
 
-  useEffect(() => {
-    if (activeUserId) localStorage.setItem('activeUserId', activeUserId)
-    else localStorage.removeItem('activeUserId')
-  }, [activeUserId])
+  const loggedIn = Boolean(currentUser)
 
-  const usersApi = useApi(getUsers, [])
+  const usersApi = useApi(() => (loggedIn ? getUsers() : Promise.resolve([])), [loggedIn])
   const sendersApi = useApi(
-    () => (activeUserId ? getSendersByUser(activeUserId) : Promise.resolve([])),
-    [activeUserId],
+    () => (loggedIn ? getSendersByUser(currentUser.id) : Promise.resolve([])),
+    [loggedIn, currentUser?.id],
   )
   const alertsApi = useApi(
     () =>
-      activeUserId
-        ? showAllAlerts
-          ? getAllAlertsByUser(activeUserId)
-          : getActiveAlertsByUser(activeUserId)
-        : Promise.resolve([]),
-    [activeUserId, showAllAlerts],
+      !loggedIn
+        ? Promise.resolve([])
+        : showAllAlerts
+          ? getAllAlertsByUser(currentUser.id)
+          : getActiveAlertsByUser(currentUser.id),
+    [loggedIn, currentUser?.id, showAllAlerts],
   )
-  const dataSourcesApi = useApi(getDataSources, [])
+  const dataSourcesApi = useApi(() => (loggedIn ? getDataSources() : Promise.resolve([])), [loggedIn])
   const dataEntriesApi = useApi(
-    () => (entrySourceFilter ? getDataEntriesBySource(entrySourceFilter) : getDataEntries()),
-    [entrySourceFilter],
+    () => (!loggedIn ? Promise.resolve([]) : entrySourceFilter ? getDataEntriesBySource(entrySourceFilter) : getDataEntries()),
+    [loggedIn, entrySourceFilter],
   )
-  const notificationsApi = useApi(getNotificationAttempts, [])
+  const notificationsApi = useApi(() => (loggedIn ? getNotificationAttempts() : Promise.resolve([])), [loggedIn])
 
   // Friendlier hint if the backend isn't reachable at all (e.g. not started yet).
   const connectionError =
-    usersApi.error && /Network Error/i.test(usersApi.error)
+    authError && /Network Error/i.test(authError)
       ? 'Cannot reach the backend at ' + (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api') + '. Is it running?'
       : null
-
-  async function refreshUsersAndDependents() {
-    await usersApi.reload()
-  }
 
   return (
     <div className="app">
       <header>
         <h1>World Event Alerts</h1>
-        <UserBar
-          users={usersApi.data ?? []}
-          activeUserId={activeUserId}
-          onSelect={setActiveUserId}
-          onUsersChanged={refreshUsersAndDependents}
-        />
+        <UserBar currentUser={currentUser} error={authError} onLogin={login} onRegister={register} onLogout={logout} />
       </header>
 
       {connectionError && <p className="error connection-error">{connectionError}</p>}
 
-      <nav className="tabs">
-        {TABS.map((t) => (
-          <button key={t} type="button" className={t === tab ? 'active' : ''} onClick={() => setTab(t)}>
-            {t}
-          </button>
-        ))}
-      </nav>
+      {initializing && <p>Checking session...</p>}
 
-      <main>
-        {tab === 'Alerts' && (
-          <AlertsPanel
-            activeUserId={activeUserId}
-            senders={sendersApi.data}
-            alerts={alertsApi.data}
-            loading={alertsApi.loading}
-            error={alertsApi.error}
-            showAll={showAllAlerts}
-            onToggleShowAll={setShowAllAlerts}
-            onChanged={alertsApi.reload}
-          />
-        )}
+      {!initializing && !loggedIn && <p className="hint">Log in or register above to continue.</p>}
 
-        {tab === 'Senders' && (
-          <SendersPanel
-            activeUserId={activeUserId}
-            senders={sendersApi.data}
-            loading={sendersApi.loading}
-            error={sendersApi.error}
-            onChanged={sendersApi.reload}
-          />
-        )}
+      {!initializing && loggedIn && (
+        <>
+          <nav className="tabs">
+            {TABS.map((t) => (
+              <button key={t} type="button" className={t === tab ? 'active' : ''} onClick={() => setTab(t)}>
+                {t}
+              </button>
+            ))}
+          </nav>
 
-        {tab === 'Data Sources' && (
-          <DataSourcesPanel
-            dataSources={dataSourcesApi.data}
-            loading={dataSourcesApi.loading}
-            error={dataSourcesApi.error}
-            onChanged={async () => {
-              await dataSourcesApi.reload()
-              await dataEntriesApi.reload()
-              await notificationsApi.reload()
-            }}
-          />
-        )}
+          <main>
+            {tab === 'Alerts' && (
+              <AlertsPanel
+                activeUserId={currentUser.id}
+                senders={sendersApi.data}
+                alerts={alertsApi.data}
+                loading={alertsApi.loading}
+                error={alertsApi.error}
+                showAll={showAllAlerts}
+                onToggleShowAll={setShowAllAlerts}
+                onChanged={alertsApi.reload}
+              />
+            )}
 
-        {tab === 'Data Entries' && (
-          <DataEntriesPanel
-            dataSources={dataSourcesApi.data}
-            entries={dataEntriesApi.data}
-            loading={dataEntriesApi.loading}
-            error={dataEntriesApi.error}
-            sourceFilter={entrySourceFilter}
-            onFilterChange={setEntrySourceFilter}
-          />
-        )}
+            {tab === 'Senders' && (
+              <SendersPanel
+                activeUserId={currentUser.id}
+                senders={sendersApi.data}
+                loading={sendersApi.loading}
+                error={sendersApi.error}
+                onChanged={sendersApi.reload}
+              />
+            )}
 
-        {tab === 'Notifications' && (
-          <NotificationsPanel attempts={notificationsApi.data} loading={notificationsApi.loading} error={notificationsApi.error} />
-        )}
+            {tab === 'Data Sources' && (
+              <DataSourcesPanel
+                dataSources={dataSourcesApi.data}
+                loading={dataSourcesApi.loading}
+                error={dataSourcesApi.error}
+                onChanged={async () => {
+                  await dataSourcesApi.reload()
+                  await dataEntriesApi.reload()
+                  await notificationsApi.reload()
+                }}
+              />
+            )}
 
-        {tab === 'Users' && (
-          <UsersPanel users={usersApi.data} loading={usersApi.loading} error={usersApi.error} onChanged={usersApi.reload} />
-        )}
-      </main>
+            {tab === 'Data Entries' && (
+              <DataEntriesPanel
+                dataSources={dataSourcesApi.data}
+                entries={dataEntriesApi.data}
+                loading={dataEntriesApi.loading}
+                error={dataEntriesApi.error}
+                sourceFilter={entrySourceFilter}
+                onFilterChange={setEntrySourceFilter}
+              />
+            )}
+
+            {tab === 'Notifications' && (
+              <NotificationsPanel
+                attempts={notificationsApi.data}
+                loading={notificationsApi.loading}
+                error={notificationsApi.error}
+              />
+            )}
+
+            {tab === 'Users' && (
+              <UsersPanel users={usersApi.data} loading={usersApi.loading} error={usersApi.error} onChanged={usersApi.reload} />
+            )}
+          </main>
+        </>
+      )}
     </div>
   )
 }

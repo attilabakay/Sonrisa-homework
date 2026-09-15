@@ -14,5 +14,8 @@ public interface UserService {
 
     UserDTO getById(UUID id);
 
+    // Backs GET /api/users/me — resolves the HTTP Basic principal's email to a UserDTO.
+    UserDTO getByEmail(String email);
+
     UserDTO deactivate(UUID id);
 }

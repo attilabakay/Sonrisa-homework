@@ -2,9 +2,11 @@ package com.sonrisa.homework.common.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -15,9 +17,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * Placeholder config so entity CRUD endpoints (and the H2 console) are reachable without
- * Spring Security's default generated-password login. Real login/session handling for the
- * MVP's "basic auth" requirement (mvp final.md §1) is not wired up yet.
+ * HTTP Basic auth (mvp final.md §1: "email + password is enough, no SSO/OAuth") — no
+ * dedicated login endpoint; the client sends credentials on every request and
+ * UserDetailsServiceImpl validates them against the User table. Stateless: no server-side
+ * session, matches a REST API + SPA client. Only self-registration and the H2 console (local
+ * dev tool) are open; everything else requires a valid, active account.
  */
 @Configuration
 @EnableWebSecurity
@@ -29,7 +33,12 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST, "/api/users/register").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
+                        .anyRequest().authenticated())
+                .httpBasic(Customizer.withDefaults());
         return http.build();
     }
 
