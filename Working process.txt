@@ -295,4 +295,29 @@ Both dev servers are still up from earlier and picked this up via HMR, so it's l
 ---
 Test verified
 
+Checked over the app. The 2 main issues I currently have are: only 1 data source is valid: an XML/RSS feed. I want to test against at least 1 real JSON api as well. Also, the other main issue I have is that neither the ingestion nor the alerts are actually scheduled tasks.
 
+Additionally, I want to verify that at least the email notification works, as I don't have a Slack server to test against with actual hooks.
+---
+prompt: After testing the data source mapping against a JSON api, I found that the ingestion did not separate the JSON file into entries as it did with the XML file from the RSS feed. As every data source is assumed to provide an array of results, either XML or JSON, it should separate the JSON array into elements as well for processing. api: https://saurav.tech/NewsAPI/everything/cnn.json
+---
+claude code:
+Let me confirm Jackson 3's JsonNode API for tree parsing since I'll need readTree/object field iteration, mirroring how I had to check the renamed packages earlier.
+
+Now let's add a JsonFeedParser, symmetric to RssFeedParser, and wire it into DataSourceIngestionService.
+
+Backend needs a restart to pick up the fix (frontend doesn't need touching). Let's restart it.
+
+Fully verified end-to-end: the CNN NewsAPI feed split into 99 individual entries, and a keyword alert correctly matched the one article containing "Real Madrid," firing a notification attempt exactly as the RSS pipeline does. Let's check git status before wrapping up.
+
+The bug: DataSourceIngestionService split XML/RSS feeds into one DataEntry per <item>, but for JSON it just took the whole response body as a single entry — no splitting at all, regardless of whether the response actually contained an array of results.
+
+The fix: New JsonFeedParser, the JSON-side equivalent of RssFeedParser. Since providers nest their results array under different keys (this NewsAPI-shaped feed uses "articles"; others use "results", "data", etc.), rather than requiring that key to be configured, it auto-detects: a top-level array is used directly; a top-level object is scanned for the first field whose value is an array; if neither applies (a flat single-object response, like the dummy MARKET/DISASTER test feeds), the whole body is still treated as one entry — so single-snapshot JSON APIs keep working exactly as before.
+
+Verified against the real API you tested with (https://saurav.tech/NewsAPI/everything/cnn.json):
+- 99 articles → 99 individual DataEntry rows (matches totalResults exactly)
+- Regression-checked that a flat single-object JSON source still produces exactly 1 entry
+- Closed the full loop: created a keyword alert for "Real Madrid," re-ingested, and got a real NotificationAttempt matched to the one article containing that phrase
+
+The backend was restarted to pick this up (in-memory DB reset, admin re-seeded automatically as usual). Nothing committed — let me know if you'd like a commit message for this one too.
+---

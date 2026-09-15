@@ -27,6 +27,7 @@ public class DataSourceIngestionService {
     private final DataSourceRepository dataSourceRepository;
     private final DataEntryService dataEntryService;
     private final RssFeedParser rssFeedParser;
+    private final JsonFeedParser jsonFeedParser;
     private final ObjectMapper objectMapper;
     private final RestClient restClient = RestClient.create();
 
@@ -36,12 +37,14 @@ public class DataSourceIngestionService {
 
         String body = restClient.get().uri(dataSource.getLink()).retrieve().body(String.class);
 
-        // XML feeds (e.g. RSS) bundle many events in one response — split into one DataEntry
-        // per item so matching still operates on a single event at a time, same as a JSON
-        // provider that returns one object per poll.
+        // Every provider is assumed to return a collection of results, whichever format it's
+        // in — split into one DataEntry per result so matching operates on a single event at
+        // a time. XML feeds nest results under <item>; JSON providers nest theirs under a
+        // top-level array field (e.g. NewsAPI-shaped responses use "articles") or, for a
+        // single-snapshot API with no array at all, the whole body is the one result.
         List<String> rawEntries = dataSource.getResourceType() == ResourceType.XML
                 ? rssFeedParser.parseItems(body).stream().map(this::toJson).toList()
-                : List.of(body);
+                : jsonFeedParser.splitEntries(body);
 
         return rawEntries.stream()
                 .map(raw -> dataEntryService.create(new DataEntryRequest(dataSourceId, raw)))
