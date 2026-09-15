@@ -464,3 +464,22 @@ Config: app.demo.enabled=false in application.properties, off by default. Enable
 Verified: booted with the default (demo off) and confirmed only the always-present admin account exists; booted again with app.demo.enabled=true and confirmed all seeded data matches exactly, Alice logs in while Bob gets 401, and — with zero extra code needed in the seeder itself — the existing scheduler picked up both data sources on its own and had already produced 132 real data entries and 119 notification attempts within minutes. Confirmed live through the actual UI too.
 
 Both servers are currently running with demo mode on, so it's ready for you to look at right now.
+---
+prompt: Let's try to actually test the email notifications
+---
+calude code:  Let's try to actually test the email notifications
+
+Real, working proof — not just "the code path is correct," but an actual successful SMTP delivery.
+
+Preview (no login needed): https://ethereal.email/message/aqkVvl.qZeQKjUyraqkV8V31x4oQTSf7AAAAAa3-SmNuSsbVlOnjzkJjE-k
+
+What I did: Rather than ask for your real email credentials, I generated a free throwaway SMTP test account via Ethereal Email (Nodemailer's testing service — nothing ever really delivers, it's a sandbox built exactly for this). Restarted the backend with those credentials passed as environment variables (not committed anywhere — they're single-session and meaningless outside this run), demo mode off to keep things clean. Then created one deterministic test: a user, an EMAIL sender pointed at the test inbox, an alert with a narrow keyword (SonrisaEmailTest) that can't accidentally over-match, and one manual DataEntry crafted to trigger it.
+
+Result: NotificationAttempt came back "status":"SENT","error":null — the first genuinely successful send in this whole project (every prior test correctly showed FAILED because nothing real was ever configured). I logged into the Ethereal web inbox and confirmed the actual delivered email:
+- Subject: "Alert triggered: NEWS"
+- To: the test address
+- Body: "Your NEWS alert matched a new event: {"title":"SonrisaEmailTest fired successfully",...}"
+
+— exactly matching what MatchingEngine.dispatch() composes. One thing worth noting: there's no explicit From address set anywhere in EmailNotificationChannel, so JavaMailSenderImpl fell back to a machine-derived default (REDACTED-USER@REDACTED-HOST). Fine for this test, but a real deployment would want message.setFrom(...) set explicitly to something configured.
+
+The backend is still running with these test SMTP credentials active, so you can trigger more real sends yourself through the UI if you want to poke at it further. Nothing about this was committed — say the word if you'd like the servers reset back to the normal placeholder config.
