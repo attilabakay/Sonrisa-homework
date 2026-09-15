@@ -1,11 +1,13 @@
 package com.sonrisa.homework.modules.sender.controller;
 
+import com.sonrisa.homework.auth.RequestingUser;
 import com.sonrisa.homework.modules.sender.dto.base.SenderDTO;
 import com.sonrisa.homework.modules.sender.dto.request.SenderRequest;
 import com.sonrisa.homework.modules.sender.service.base.SenderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,28 +30,28 @@ public class SenderController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public SenderDTO create(@Valid @RequestBody SenderRequest request) {
-        return senderService.create(request);
+    public SenderDTO create(@Valid @RequestBody SenderRequest request, Authentication authentication) {
+        return senderService.create(request, RequestingUser.from(authentication));
     }
 
     @GetMapping("/user/{userId}")
-    public List<SenderDTO> getByUser(@PathVariable UUID userId) {
-        return senderService.getByUser(userId);
+    public List<SenderDTO> getByUser(@PathVariable UUID userId, Authentication authentication) {
+        return senderService.getByUser(userId, RequestingUser.from(authentication));
     }
 
     @GetMapping("/{id}")
-    public SenderDTO getById(@PathVariable UUID id) {
-        return senderService.getById(id);
+    public SenderDTO getById(@PathVariable UUID id, Authentication authentication) {
+        return senderService.getById(id, RequestingUser.from(authentication));
     }
 
     @PutMapping("/{id}")
-    public SenderDTO update(@PathVariable UUID id, @Valid @RequestBody SenderRequest request) {
-        return senderService.update(id, request);
+    public SenderDTO update(@PathVariable UUID id, @Valid @RequestBody SenderRequest request, Authentication authentication) {
+        return senderService.update(id, request, RequestingUser.from(authentication));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable UUID id) {
-        senderService.delete(id);
+    public void delete(@PathVariable UUID id, Authentication authentication) {
+        senderService.delete(id, RequestingUser.from(authentication));
     }
 }

@@ -11,6 +11,7 @@ export default function NotificationsPanel({ attempts, loading, error }) {
         <thead>
           <tr>
             <th>Sent at</th>
+            <th>User</th>
             <th>Alert</th>
             <th>Data entry</th>
             <th>Status</th>
@@ -21,6 +22,7 @@ export default function NotificationsPanel({ attempts, loading, error }) {
           {attempts?.map((a) => (
             <tr key={a.id}>
               <td>{new Date(a.sentAt).toLocaleString()}</td>
+              <td>{a.userEmail}</td>
               <td title={a.alertId}>{a.alertId.slice(0, 8)}</td>
               <td title={a.dataEntryId}>{a.dataEntryId.slice(0, 8)}</td>
               <td>
@@ -33,7 +35,7 @@ export default function NotificationsPanel({ attempts, loading, error }) {
           ))}
           {attempts?.length === 0 && (
             <tr>
-              <td colSpan={5}>No notification attempts yet.</td>
+              <td colSpan={6}>No notification attempts yet.</td>
             </tr>
           )}
         </tbody>

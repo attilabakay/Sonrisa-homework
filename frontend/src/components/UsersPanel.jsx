@@ -1,16 +1,13 @@
 import { Fragment, useState } from 'react'
 import { deactivateUser } from '../api/users'
-import { getAllAlertsByUser } from '../api/alerts'
 import { errorMessage } from '../hooks/useApi'
 import { describeCriteria } from '../utils/alertCriteria'
 
-// Admin "get all users" view + enable/disable + "visibility into which alerts belong to
-// which user" (mvp final.md §5, workflow.md §1) via the expandable row below.
+// Admin "get all users" view, joined to their Alerts (mvp final.md §5, workflow.md §1) --
+// each user's alerts arrive embedded in the same response, expanded per row on demand.
 export default function UsersPanel({ users, loading, error, onChanged }) {
   const [actionError, setActionError] = useState(null)
   const [expandedUserId, setExpandedUserId] = useState(null)
-  const [alertsByUser, setAlertsByUser] = useState({})
-  const [alertsLoading, setAlertsLoading] = useState(false)
 
   async function handleDeactivate(id) {
     setActionError(null)
@@ -22,23 +19,8 @@ export default function UsersPanel({ users, loading, error, onChanged }) {
     }
   }
 
-  async function toggleAlerts(userId) {
-    if (expandedUserId === userId) {
-      setExpandedUserId(null)
-      return
-    }
-    setExpandedUserId(userId)
-    if (!alertsByUser[userId]) {
-      setAlertsLoading(true)
-      try {
-        const alerts = await getAllAlertsByUser(userId)
-        setAlertsByUser((prev) => ({ ...prev, [userId]: alerts }))
-      } catch (err) {
-        setActionError(errorMessage(err))
-      } finally {
-        setAlertsLoading(false)
-      }
-    }
+  function toggleAlerts(userId) {
+    setExpandedUserId((current) => (current === userId ? null : userId))
   }
 
   if (loading) return <p>Loading users...</p>
@@ -70,7 +52,7 @@ export default function UsersPanel({ users, loading, error, onChanged }) {
                 </td>
                 <td>
                   <button type="button" onClick={() => toggleAlerts(u.id)}>
-                    {expandedUserId === u.id ? 'Hide alerts' : 'View alerts'}
+                    {expandedUserId === u.id ? 'Hide alerts' : `View alerts (${u.alerts.length})`}
                   </button>
                   {u.active && (
                     <button type="button" onClick={() => handleDeactivate(u.id)}>
@@ -82,9 +64,7 @@ export default function UsersPanel({ users, loading, error, onChanged }) {
               {expandedUserId === u.id && (
                 <tr>
                   <td colSpan={4}>
-                    {alertsLoading && !alertsByUser[u.id] ? (
-                      <p className="hint">Loading alerts...</p>
-                    ) : (alertsByUser[u.id] ?? []).length === 0 ? (
+                    {u.alerts.length === 0 ? (
                       <p className="hint">No alerts for this user.</p>
                     ) : (
                       <table>
@@ -96,7 +76,7 @@ export default function UsersPanel({ users, loading, error, onChanged }) {
                           </tr>
                         </thead>
                         <tbody>
-                          {alertsByUser[u.id].map((a) => (
+                          {u.alerts.map((a) => (
                             <tr key={a.id}>
                               <td>{a.type}</td>
                               <td>{describeCriteria(a.type, a.criteria)}</td>

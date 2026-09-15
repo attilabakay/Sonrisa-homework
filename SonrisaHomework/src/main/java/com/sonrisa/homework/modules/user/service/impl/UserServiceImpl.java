@@ -2,7 +2,10 @@ package com.sonrisa.homework.modules.user.service.impl;
 
 import com.sonrisa.homework.common.exception.ConflictException;
 import com.sonrisa.homework.common.exception.ResourceNotFoundException;
+import com.sonrisa.homework.modules.alert.dto.base.AlertDTO;
+import com.sonrisa.homework.modules.alert.repository.AlertRepository;
 import com.sonrisa.homework.modules.user.dto.base.UserDTO;
+import com.sonrisa.homework.modules.user.dto.base.UserWithAlertsDTO;
 import com.sonrisa.homework.modules.user.dto.request.UserRegisterRequest;
 import com.sonrisa.homework.modules.user.model.User;
 import com.sonrisa.homework.modules.user.repository.UserRepository;
@@ -20,6 +23,7 @@ import java.util.UUID;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final AlertRepository alertRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -38,8 +42,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserDTO> getAll() {
-        return userRepository.findAll().stream().map(UserDTO::fromEntity).toList();
+    public List<UserWithAlertsDTO> getAll() {
+        return userRepository.findAll().stream()
+                .map(user -> UserWithAlertsDTO.fromEntity(
+                        user,
+                        alertRepository.findByUserId(user.getId()).stream().map(AlertDTO::fromEntity).toList()))
+                .toList();
     }
 
     @Override

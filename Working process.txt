@@ -398,3 +398,41 @@ The fix:
 Verified: curl round-trip (deactivate → activate → active: true), confirmed a regular user still gets 403 on the new endpoint, and drove the actual UI — inactive row → kebab correctly offered "Activate" → clicked it → badge flipped to active, zero console errors.
 
 Both servers are up with this live. Let me know if you want a commit message.
+---
+prompt: Let's verify if the Minimum viable product is done. Compare the current implementations to the design documents.
+---
+claude code:
+
+This warrants a systematic line-by-line audit rather than relying on my memory of what I built — I'll fork myself to re-read the three design docs fresh and cross-check every requirement against the actual current code, then report back a structured gap analysis.
+
+The audit's back. Overall the MVP is essentially complete against all three docs — every §1–§5 requirement in mvp final.md is implemented, the workflow.md CRUD table matches almost exactly, and the datamodel matches field-for-field. But it did surface one real gap worth taking seriously.
+
+The one gap that actually matters
+
+Alert and Sender endpoints don't check that the authenticated user matches the userId they're reading or writing. GET /api/alerts/user/{userId} and GET /api/senders/user/{userId} will happily return anyone's data if you know their UUID — same for creating an alert/sender "as" another user via the request body. workflow.md explicitly documents Alert reads as "scoped to logged-in user," but that scoping only exists today because the frontend always passes currentUser.id; the API itself doesn't enforce it. Right now SecurityConfig only checks "are you logged in," never "is this actually your resource."
+
+Two smaller shortfalls
+
+- NotificationAttemptDTO carries no user/email context, so the admin Notifications view can't show whose alert fired without a manual cross-reference — workflow.md calls for the read to be "joined through Alert → User for context."
+- The admin "get all users" view isn't joined to their alerts in one response (workflow.md's literal wording) — it's satisfied instead via a second admin-only call + the Users tab's "View alerts" expansion. Functionally equivalent, just not literally one joined response.
+
+Everything else checked out clean
+
+All three Channel Adapter/typed-interface/mapping claims in mvp final.md's "What This MVP Proves" hold up, the datamodel matches exactly (only naming differences like pw→password), workflow.md's per-entity Create/Read/Update/Deactivate/Delete semantics all match (including the ones that are correctly absent, like no User update or DataEntry delete), and everything explicitly deferred in §6 is genuinely not built. Backend compiles clean, frontend lints clean.
+
+Given the timeline framing you've used throughout ("simple," "not extensive"), I'd treat the ownership gap as the one worth fixing before calling this done — it's a real authorization hole, not a documentation nitpick. Want me to add principal-scoping to the Alert/Sender endpoints (regular users restricted to their own userId, admins unrestricted)? The other two are cosmetic/API-shape gaps I'd leave as-is unless you want them closed too.
+---
+The audit came back with 1 real issue and two smaller things. I decided to make it fax all three. And we will see if I have time for some stretch goals I was thinking about.
+
+prompt:  Let's fix the ownership gap and the two smaller shortfalls
+---
+claude code: 
+All three fixes are in, verified via curl and confirmed live through the actual UI with zero console errors. Summary:
+
+1. Ownership gap (the real security hole) — Alert and Sender endpoints now enforce that a regular user can only read/write their own resources. New RequestingUser record (id + admin, with canAccess(ownerId)) resolved once per request from a custom AppUserPrincipal (carries the domain user's UUID on the Spring Security principal, no extra DB lookup). Every Alert/Sender service method now checks ownership before acting, throwing AccessDeniedException → 403 for anyone reaching outside their own data; admins remain unrestricted. Verified: Bob got 403 trying to read/create/modify Alice's alerts and senders by UUID in six different ways, while Alice and Admin both still worked normally.
+
+2. NotificationAttemptDTO missing user context — added userId/userEmail, populated from alert.getUser() (already loaded in-session via Hibernate's open-in-view, same pattern AlertDTO already used). The Notifications tab now has a User column instead of an unreadable UUID-only row.
+
+3. Users list not joined to Alerts — new UserWithAlertsDTO embeds each user's alerts directly in the GET /api/users response (UserServiceImpl now pulls via AlertRepository.findByUserId per user). This actually simplified the frontend: UsersPanel's "View alerts" no longer needs its own fetch/loading state — the data's already there, so expanding is instant.
+
+Both servers are up and this is live. Let me know if you want a commit message.

@@ -1,6 +1,7 @@
 package com.sonrisa.homework.modules.user.controller;
 
 import com.sonrisa.homework.modules.user.dto.base.UserDTO;
+import com.sonrisa.homework.modules.user.dto.base.UserWithAlertsDTO;
 import com.sonrisa.homework.modules.user.dto.request.UserRegisterRequest;
 import com.sonrisa.homework.modules.user.service.base.UserService;
 import jakarta.validation.Valid;
@@ -32,9 +33,9 @@ public class UserController {
         return userService.register(request);
     }
 
-    // Admin "get all users" view (mvp final.md §5).
+    // Admin "get all users" view, joined to their Alerts (mvp final.md §5, workflow.md §1).
     @GetMapping
-    public List<UserDTO> getAll() {
+    public List<UserWithAlertsDTO> getAll() {
         return userService.getAll();
     }
 

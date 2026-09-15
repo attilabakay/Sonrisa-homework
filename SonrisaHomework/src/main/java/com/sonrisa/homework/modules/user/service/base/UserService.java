@@ -1,6 +1,7 @@
 package com.sonrisa.homework.modules.user.service.base;
 
 import com.sonrisa.homework.modules.user.dto.base.UserDTO;
+import com.sonrisa.homework.modules.user.dto.base.UserWithAlertsDTO;
 import com.sonrisa.homework.modules.user.dto.request.UserRegisterRequest;
 
 import java.util.List;
@@ -10,7 +11,8 @@ public interface UserService {
 
     UserDTO register(UserRegisterRequest request);
 
-    List<UserDTO> getAll();
+    // Admin "get all users" view, joined to their Alerts (workflow.md §1).
+    List<UserWithAlertsDTO> getAll();
 
     UserDTO getById(UUID id);
 
