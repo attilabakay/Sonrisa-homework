@@ -351,3 +351,37 @@ Also added @EnableScheduling to the main application class and the app.ingestion
 Verified live, not just compiled — booted with the interval deliberately set to 1 minute and confirmed the exact warning log clamping it to 2; then with 3 seeded sources (one real/active, one active-but-broken-URL, one inactive) watched two real scheduled ticks 2 minutes apart and confirmed: the inactive source was never touched, the broken URL failed with a clear warning without stopping the run, and the real BBC source ingested 37 entries — all persisted correctly in the DB.
 
 Both servers are up now with the normal 5-minute default config and a bit of demo data re-seeded (alice + a keyword alert + the BBC source) if you want to keep poking at it. Let me know if you want a commit message for this too.
+---
+prompt: Manual test conformed that the scheduling is working. But I also found that the UI never gets an update if there is no full page refresh.
+---
+claude code:
+Real gap — the scheduler creates DataEntry/NotificationAttempt rows in the background, but the Data Entries and Notifications tabs only fetch once on mount. I'll add lightweight polling to those two (the ones the scheduler actually touches), not everywhere, keeping it proportionate to the rest of this feature's scope.
+
+Now wire polling into the two hooks that the scheduler actually touches.
+
+Now let's verify the actual fix live — simulate "background data appearing" (exactly what the scheduler does) while sitting on the tab, with zero interaction, and confirm the UI updates itself.
+
+Confirmed — 445 → 446 rows, the injected marker text appeared on screen with zero clicks or reload. Let's glance at the before/after screenshots to confirm there's no jarring loading flash from the silent poll.
+
+Fix confirmed working exactly as intended — silent background refresh, no loading flicker, no layout jump, data just appears. Summary:
+
+The gap: useApi only fetched once on mount (or when explicitly reloaded via a button). The scheduler writes DataEntry/NotificationAttempt rows in the background, completely outside any user action, so those two tabs went stale until a manual page refresh.
+
+The fix: useApi now accepts an optional pollMs; when set, it silently re-fetches on that interval — "silent" meaning it skips the loading flag so the currently-displayed table doesn't flash/hide on every poll, it just swaps in fresh data. Wired at 15s onto exactly the two hooks the scheduler actually writes to — dataEntriesApi and notificationsApi — nothing else. Alerts/Senders/Data Sources/Users stay on-demand as before, since those are driven by the current user's own actions, not the background job.
+
+Verified live, not just logically: with the browser sitting on the Data Entries tab doing nothing, I POSTed a new entry directly to the backend (identical to what the scheduler does) and confirmed — with zero clicks or reloads — the row count went from 445→446 and the injected content appeared on screen within the poll window. Zero console errors, no visual glitch.
+
+Both servers are still running with your existing data intact. Let me know if you want the same 15s polling extended to any other tab, or a commit message for this one.
+---
+prompt: Navigation should also trigger a refetch for all menus.
+---
+claude code:
+Adding a per-tab reload map, invoked on every navigation click.
+
+Now let's verify this with something polling doesn't already cover — mutate data on a non-polled tab (Data Sources) from outside the browser, then confirm clicking into that tab shows the fresh state immediately.
+
+Done and fully verified.
+
+The fix: added a reloadForTab map in App.jsx and a navigateTo(t) function (now wired to every tab button's onClick) that calls the relevant hook's reload() the moment you navigate to that tab — on top of, not instead of, the polling from before.
+
+Verified with a test that polling specifically can't explain: logged in as admin, viewed Data Sources (BBC row showing "active"), navigated to Alerts, deactivated that same source via a direct API call (simulating a change from elsewhere), then immediately clicked back into Data Sources with no wait at all — it showed "inactive" right away. Zero console errors.

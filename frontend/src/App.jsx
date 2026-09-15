@@ -22,6 +22,11 @@ import NotificationsPanel from './components/NotificationsPanel'
 const USER_TABS = ['Alerts', 'Senders']
 const ADMIN_TABS = ['Data Sources', 'Data Entries', 'Notifications', 'Users']
 
+// Data Entries and Notifications are the two views the scheduled ingestion job (running
+// independently in the background) actually writes to — poll them so new rows show up
+// without a full page reload.
+const LIVE_DATA_POLL_MS = 15_000
+
 export default function App() {
   const { currentUser, error: authError, initializing, login, register, logout } = useAuth()
   const [tab, setTab] = useState('Alerts')
@@ -57,8 +62,29 @@ export default function App() {
   const dataEntriesApi = useApi(
     () => (!isAdmin ? Promise.resolve([]) : entrySourceFilter ? getDataEntriesBySource(entrySourceFilter) : getDataEntries()),
     [isAdmin, entrySourceFilter],
+    { pollMs: isAdmin ? LIVE_DATA_POLL_MS : undefined },
   )
-  const notificationsApi = useApi(() => (isAdmin ? getNotificationAttempts() : Promise.resolve([])), [isAdmin])
+  const notificationsApi = useApi(
+    () => (isAdmin ? getNotificationAttempts() : Promise.resolve([])),
+    [isAdmin],
+    { pollMs: isAdmin ? LIVE_DATA_POLL_MS : undefined },
+  )
+
+  // Navigating to a tab refetches its data — otherwise you'd see whatever was last loaded,
+  // which may be stale if something changed while you were on a different tab.
+  const reloadForTab = {
+    Alerts: alertsApi.reload,
+    Senders: sendersApi.reload,
+    'Data Sources': dataSourcesApi.reload,
+    'Data Entries': dataEntriesApi.reload,
+    Notifications: notificationsApi.reload,
+    Users: usersApi.reload,
+  }
+
+  function navigateTo(t) {
+    setTab(t)
+    reloadForTab[t]?.()
+  }
 
   // Friendlier hint if the backend isn't reachable at all (e.g. not started yet).
   const connectionError =
@@ -83,7 +109,7 @@ export default function App() {
         <>
           <nav className="tabs">
             {visibleTabs.map((t) => (
-              <button key={t} type="button" className={t === tab ? 'active' : ''} onClick={() => setTab(t)}>
+              <button key={t} type="button" className={t === tab ? 'active' : ''} onClick={() => navigateTo(t)}>
                 {t}
               </button>
             ))}
