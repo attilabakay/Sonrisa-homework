@@ -483,3 +483,30 @@ Result: NotificationAttempt came back "status":"SENT","error":null — the first
 — exactly matching what MatchingEngine.dispatch() composes. One thing worth noting: there's no explicit From address set anywhere in EmailNotificationChannel, so JavaMailSenderImpl fell back to a machine-derived default (REDACTED-USER@REDACTED-HOST). Fine for this test, but a real deployment would want message.setFrom(...) set explicitly to something configured.
 
 The backend is still running with these test SMTP credentials active, so you can trigger more real sends yourself through the UI if you want to poke at it further. Nothing about this was committed — say the word if you'd like the servers reset back to the normal placeholder config.
+---
+prompt: Stretch goal: let's implement a connector to a Discord webhook. I have an actual Discord server we can test agains. This will prove the interface is useful for extending the senders. 
+---
+claude code:
+Let's implement a Discord adapter — this is exactly the "third channel = one new class, zero changes elsewhere" proof mvp final.md §3 calls for.
+
+Now the frontend — add DISCORD to the sender-type picker.
+
+Let's compile and lint before touching a live webhook.
+
+Now let's verify structurally with a fake Discord-shaped webhook URL — confirming the resolver picks up DISCORD and dispatches a real HTTP POST (it should fail against a fake URL, but with a real network error, not a "no adapter registered" error). 
+
+Structural proof complete — zero changes to NotificationChannelResolver, MatchingEngine, or the data model; just the new adapter class + one enum entry. The request actually reached Discord's real API and got back a genuine Discord error ("fake" is not snowflake — their validation on the fake webhook ID), correctly captured as FAILED with real error text.
+
+Now for the real test against your server — same reasoning as the Slack test earlier: a webhook URL is a bearer credential, so rather than pasting it into this chat, add it yourself directly in the running app:
+
+1. Open http://localhost:5173, log in (or register)
+2. Senders tab → type DISCORD, paste your real webhook URL (Discord: Server Settings → Integrations → Webhooks → copy URL), "Add sender"
+3. Alerts tab → create an alert using that sender
+4. Trigger a match — easiest is the admin Data Sources tab → "Ingest now" on an active source if the keyword will hit something, or I can create one manual matching DataEntry for you if you give me the alert's criteria
+5. Check Notifications tab — should show SENT, and the message should land in your real Discord channel
+
+Great proof — real Discord delivery, real CNN content. Let's save it into the repo.
+
+Confirmed end-to-end — the backend shows a real burst of status: SENT, error: null records for alice's Discord alert (alertId c06d7a0f...), matching your feed re-ingestion, consistent with the "dancing baby" article landing in your server. The one FAILED entry in there is my earlier structural test against a deliberately fake webhook URL, not a problem.
+
+Discord adapter is fully proven — both by the code path (compiles, resolver auto-discovers it, zero changes elsewhere) and now by a real delivery into your actual server. Screenshot's saved at screenshots/discord-notification-real-delivery.png. Want a commit message for the Discord adapter + this screenshot together?

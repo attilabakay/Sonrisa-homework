@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { createSender, deleteSender } from '../api/senders'
 import { errorMessage } from '../hooks/useApi'
 
-const SENDER_TYPES = ['EMAIL', 'SLACK']
+const SENDER_TYPES = ['EMAIL', 'SLACK', 'DISCORD']
+
+const CONFIG_PLACEHOLDER = {
+  EMAIL: 'email address',
+  SLACK: 'Slack webhook URL',
+  DISCORD: 'Discord webhook URL',
+}
 
 // Senders aren't given their own workflow.md section — they're "picked/created" while
 // building an Alert (workflow.md §4) — so this panel manages them as reusable destinations.
@@ -51,7 +57,7 @@ export default function SendersPanel({ activeUserId, senders, loading, error, on
           ))}
         </select>
         <input
-          placeholder={type === 'EMAIL' ? 'email address' : 'Slack webhook URL'}
+          placeholder={CONFIG_PLACEHOLDER[type]}
           value={config}
           onChange={(e) => setConfig(e.target.value)}
           required
