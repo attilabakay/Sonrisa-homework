@@ -436,3 +436,31 @@ All three fixes are in, verified via curl and confirmed live through the actual 
 3. Users list not joined to Alerts — new UserWithAlertsDTO embeds each user's alerts directly in the GET /api/users response (UserServiceImpl now pulls via AlertRepository.findByUserId per user). This actually simplified the frontend: UsersPanel's "View alerts" no longer needs its own fetch/loading state — the data's already there, so expanding is instant.
 
 Both servers are up and this is live. Let me know if you want a commit message.
+---
+promt: MVP reached; let's work on a few stretch goals. First, create a demo mod where we already load up a few users with data sources; let's include the two data sources already used in our testing. Demo should be enabled trough the application.properties
+---
+claude code:
+Let's build this as a CommandLineRunner gated behind app.demo.enabled, seeding exactly the two real data sources we've used throughout testing plus a couple of demo users/senders/alerts to make it immediately useful.
+
+Now add the property, off by default.
+
+First, boot with defaults (demo off) and confirm nothing extra gets seeded beyond the admin account.
+
+Only the always-needed admin account exists, nothing else. Now let's test with demo mode enabled.
+
+Let's do a quick visual check through the actual UI, then leave it running in demo mode since that's exactly what was just built.
+
+Exactly right — both data sources present and active, and the earlier check already confirmed the scheduler had already ingested 132 entries and generated 119 notification attempts against them within the first few minutes of boot.
+
+Demo mode is done and fully verified. Summary:
+
+DemoDataSeeder (com.sonrisa.homework.bootstrap, alongside the existing DemoAdminSeeder) — a CommandLineRunner gated by @ConditionalOnProperty(prefix = "app.demo", name = "enabled", havingValue = "true"), so it does nothing at all unless explicitly turned on. Seeds:
+- alice@example.com / password123 (active) with an email + Slack sender and one alert per type (NEWS/MARKET/DISASTER)
+- bob@example.com / password123 (disabled — demonstrates that state, and that a disabled user is rejected at login, not just at matching time)
+- The two real NEWS data sources used throughout this project's own testing: BBC RSS (XML) and the CNN NewsAPI mirror (JSON) — same category, different formats, proving §4's "second provider is a mapping exercise" with genuinely live data
+
+Config: app.demo.enabled=false in application.properties, off by default. Enable with ./gradlew bootRun --args='--app.demo.enabled=true' or by flipping the property.
+
+Verified: booted with the default (demo off) and confirmed only the always-present admin account exists; booted again with app.demo.enabled=true and confirmed all seeded data matches exactly, Alice logs in while Bob gets 401, and — with zero extra code needed in the seeder itself — the existing scheduler picked up both data sources on its own and had already produced 132 real data entries and 119 notification attempts within minutes. Confirmed live through the actual UI too.
+
+Both servers are currently running with demo mode on, so it's ready for you to look at right now.
